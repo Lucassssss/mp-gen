@@ -6,20 +6,29 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ReasoningContent } from "./reasoning-content";
+import { ToolResultContent } from "./tool-result-content";
+
+export type MessageBlockType = "reasoning" | "text" | "tool-call" | "tool-result";
+
+export interface MessageBlock {
+  id: string;
+  type: MessageBlockType;
+  content?: string;
+  name?: string;
+  input?: string;
+  output?: string;
+  status?: "running" | "completed" | "error";
+  isCollapsed?: boolean;
+}
 
 export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  toolCalls?: Array<{
-    id: string;
-    name: string;
-    input: string;
-    output?: string;
-    status: "running" | "completed" | "error";
-  }>;
-  reasoning?: string;
+  isComplete?: boolean;
+  blocks?: MessageBlock[];
 }
 
 interface ChatMessageProps {
@@ -70,7 +79,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
 
   return (
     <div className={isUser ? "flex justify-end" : "flex justify-start"}>
-      <div className={`flex gap-3 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+      <div className={`flex gap-3 max-w-[85%] w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
         <div className="w-8 h-8 flex items-center justify-center shrink-0">
           {isUser ? (
             <User className="w-5 h-5 text-muted-foreground" />
@@ -80,10 +89,11 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         </div>
         <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
           <div
-            className={`group relative px-4 py-3 ${
+            // className={`group relative px-4 py-3 ${
+            className={`group relative ${
               isUser
-                ? "bg-primary text-primary-foreground"
-                : "bg-background border border-border"
+                ? "bg-primary text-primary-foreground px-4 py-3"
+                : "bg-background w-full"
             }`}
             style={{ borderRadius: "4px" }}
           >
@@ -92,129 +102,187 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
                 {message.content}
               </div>
             ) : (
-              <div className="markdown-content text-sm leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code(props) {
-                      const { className, children } = props;
-                      return <CodeBlock className={className}>{children}</CodeBlock>;
-                    },
-                    p({ children }) {
-                      return <p className="mb-2 last:mb-0">{children}</p>;
-                    },
-                    ul({ children }) {
-                      return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>;
-                    },
-                    ol({ children }) {
-                      return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
-                    },
-                    li({ children }) {
-                      return <li className="mb-0.5">{children}</li>;
-                    },
-                    h1({ children }) {
-                      return <h1 className="text-lg font-semibold mb-2 mt-3">{children}</h1>;
-                    },
-                    h2({ children }) {
-                      return <h2 className="text-base font-semibold mb-2 mt-2">{children}</h2>;
-                    },
-                    h3({ children }) {
-                      return <h3 className="text-sm font-semibold mb-1 mt-2">{children}</h3>;
-                    },
-                    a({ href, children }) {
+              <div className="space-y-3">
+                {message.blocks && message.blocks.length > 0 ? (
+                  message.blocks.map((block) => {
+                    if (block.type === "reasoning") {
                       return (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline underline-offset-2 text-foreground"
-                        >
-                          {children}
-                        </a>
+                        <ReasoningContent
+                          key={block.id}
+                          reasoning={block.content || ""}
+                          isComplete={message.isComplete ?? true}
+                          isCollapsed={block.isCollapsed}
+                        />
                       );
-                    },
-                    blockquote({ children }) {
+                    }
+                    if (block.type === "text") {
                       return (
-                        <blockquote className="border-l-2 border-muted-foreground pl-3 italic text-muted-foreground my-2">
-                          {children}
-                        </blockquote>
-                      );
-                    },
-                    hr() {
-                      return <hr className="my-3 border-border" />;
-                    },
-                    table({ children }) {
-                      return (
-                        <div className="overflow-x-auto my-3">
-                          <table className="min-w-full border border-border rounded text-sm">
-                            {children}
-                          </table>
+                        <div key={block.id} className="markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code(props) {
+                                const { className, children } = props;
+                                return <CodeBlock className={className}>{children}</CodeBlock>;
+                              },
+                              p({ children }) {
+                                return <p className="mb-2 last:mb-0">{children}</p>;
+                              },
+                              ul({ children }) {
+                                return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>;
+                              },
+                              ol({ children }) {
+                                return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
+                              },
+                              li({ children }) {
+                                return <li className="mb-0.5">{children}</li>;
+                              },
+                              h1({ children }) {
+                                return <h1 className="text-lg font-semibold mb-2 mt-3">{children}</h1>;
+                              },
+                              h2({ children }) {
+                                return <h2 className="text-base font-semibold mb-2 mt-2">{children}</h2>;
+                              },
+                              h3({ children }) {
+                                return <h3 className="text-sm font-semibold mb-1 mt-2">{children}</h3>;
+                              },
+                              a({ href, children }) {
+                                return (
+                                  <a
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline underline-offset-2 text-foreground"
+                                  >
+                                    {children}
+                                  </a>
+                                );
+                              },
+                              blockquote({ children }) {
+                                return (
+                                  <blockquote className="border-l-2 border-muted-foreground pl-3 italic text-muted-foreground my-2">
+                                    {children}
+                                  </blockquote>
+                                );
+                              },
+                              hr() {
+                                return <hr className="my-3 border-border" />;
+                              },
+                              table({ children }) {
+                                return (
+                                  <div className="overflow-x-auto my-3">
+                                    <table className="min-w-full border border-border rounded text-sm">
+                                      {children}
+                                    </table>
+                                  </div>
+                                );
+                              },
+                              th({ children }) {
+                                return (
+                                  <th className="border border-border bg-muted px-3 py-1.5 text-left font-medium">
+                                    {children}
+                                  </th>
+                                );
+                              },
+                              td({ children }) {
+                                return <td className="border border-border px-3 py-1.5">{children}</td>;
+                              },
+                            }}
+                          >
+                            {block.content || ""}
+                          </ReactMarkdown>
                         </div>
                       );
-                    },
-                    th({ children }) {
+                    }
+                    if (block.type === "tool-call" || block.type === "tool-result") {
                       return (
-                        <th className="border border-border bg-muted px-3 py-1.5 text-left font-medium">
-                          {children}
-                        </th>
+                        <ToolResultContent
+                          key={block.id}
+                          name={block.name}
+                          input={block.input}
+                          output={block.output}
+                          status={block.status}
+                          isCollapsed={block.isCollapsed}
+                        />
                       );
-                    },
-                    td({ children }) {
-                      return <td className="border border-border px-3 py-1.5">{children}</td>;
-                    },
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-            )}
-            {message.reasoning && message.reasoning.length > 0 && (
-              <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <div className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1">
-                  <span>🤔</span>
-                  <span>思考过程</span>
-                </div>
-                <div className="text-xs text-amber-800 dark:text-amber-300 whitespace-pre-wrap font-mono">
-                  {message.reasoning}
-                </div>
-              </div>
-            )}
-            {message.toolCalls && message.toolCalls.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <div className="text-xs text-muted-foreground font-medium">调用工具:</div>
-                {message.toolCalls.map((tool) => (
-                  <div
-                    key={tool.id}
-                    className={`text-xs rounded p-2 ${
-                      tool.status === "running"
-                        ? "bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800"
-                        : tool.status === "error"
-                        ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"
-                        : "bg-muted border border-border"
-                    }`}
+                    }
+                    return null;
+                  })
+                ) : (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code(props) {
+                        const { className, children } = props;
+                        return <CodeBlock className={className}>{children}</CodeBlock>;
+                      },
+                      p({ children }) {
+                        return <p className="mb-2 last:mb-0">{children}</p>;
+                      },
+                      ul({ children }) {
+                        return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>;
+                      },
+                      ol({ children }) {
+                        return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
+                      },
+                      li({ children }) {
+                        return <li className="mb-0.5">{children}</li>;
+                      },
+                      h1({ children }) {
+                        return <h1 className="text-lg font-semibold mb-2 mt-3">{children}</h1>;
+                      },
+                      h2({ children }) {
+                        return <h2 className="text-base font-semibold mb-2 mt-2">{children}</h2>;
+                      },
+                      h3({ children }) {
+                        return <h3 className="text-sm font-semibold mb-1 mt-2">{children}</h3>;
+                      },
+                      a({ href, children }) {
+                        return (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 text-foreground"
+                          >
+                            {children}
+                          </a>
+                        );
+                      },
+                      blockquote({ children }) {
+                        return (
+                          <blockquote className="border-l-2 border-muted-foreground pl-3 italic text-muted-foreground my-2">
+                            {children}
+                          </blockquote>
+                        );
+                      },
+                      hr() {
+                        return <hr className="my-3 border-border" />;
+                      },
+                      table({ children }) {
+                        return (
+                          <div className="overflow-x-auto my-3">
+                            <table className="min-w-full border border-border rounded text-sm">
+                              {children}
+                            </table>
+                          </div>
+                        );
+                      },
+                      th({ children }) {
+                        return (
+                          <th className="border border-border bg-muted px-3 py-1.5 text-left font-medium">
+                            {children}
+                          </th>
+                        );
+                      },
+                      td({ children }) {
+                        return <td className="border border-border px-3 py-1.5">{children}</td>;
+                      },
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium">{tool.name}</span>
-                      {tool.status === "running" && (
-                        <span className="text-blue-600 dark:text-blue-400">运行中...</span>
-                      )}
-                      {tool.status === "completed" && (
-                        <span className="text-green-600 dark:text-green-400">✓</span>
-                      )}
-                      {tool.status === "error" && (
-                        <span className="text-red-600 dark:text-red-400">✗</span>
-                      )}
-                    </div>
-                    <div className="mt-1 font-mono text-muted-foreground">
-                      输入: {tool.input}
-                    </div>
-                    {tool.output && (
-                      <div className="mt-1 font-mono">
-                        输出: {tool.output}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    {message.content}
+                  </ReactMarkdown>
+                )}
               </div>
             )}
             {!isUser && (

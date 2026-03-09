@@ -75,7 +75,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             className={`group relative px-4 py-3 ${
               isUser
                 ? "bg-primary text-primary-foreground"
-                : "bg-background border border-border"
+                : "bg-background"
             }`}
             style={{ borderRadius: "4px" }}
           >

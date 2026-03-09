@@ -28,7 +28,7 @@ interface StreamingMessage extends Message {
 
 export function ChatContainer() {
   const [messages, setMessages] = useState<StreamingMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState("展示下你的能力");
   const [isLoading, setIsLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<ChatMode>("auto");

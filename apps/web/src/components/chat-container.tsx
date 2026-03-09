@@ -42,9 +42,6 @@ export interface Subagent {
 
 interface StreamingMessage extends Message {
   isComplete: boolean;
-  toolCalls?: ToolCall[];
-  mode?: ChatMode;
-  reasoning?: string;
 }
 
 export function ChatContainer() {
@@ -89,8 +86,7 @@ export function ChatContainer() {
       content: "",
       timestamp: new Date(),
       isComplete: false,
-      toolCalls: mode === "agent" ? [] : undefined,
-      mode,
+      blocks: [],
     };
 
     setMessages((prev) => [...prev, userMessage, aiMessage]);
@@ -147,6 +143,7 @@ export function ChatContainer() {
 
               try {
                 const parsed = JSON.parse(data);
+                console.log("[SSE] Received:", parsed.type, parsed.content?.substring?.(0, 50));
 
                 if (parsed.type === "content") {
                   const content = typeof parsed.content === "string" 
@@ -227,7 +224,7 @@ export function ChatContainer() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let currentToolCallId = 0;
+      let blockIdCounter = 0;
 
       if (reader) {
         while (true) {
@@ -244,65 +241,172 @@ export function ChatContainer() {
 
               try {
                 const parsed = JSON.parse(data);
+                console.log("[NormalChat] Received:", parsed.type, parsed.content?.substring?.(0, 50));
 
-                if (mode === "agent") {
-                  if (parsed.type === "tool_call") {
-                    const toolId = `tool-${currentToolCallId++}`;
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId
-                          ? {
-                              ...m,
-                              toolCalls: [
-                                ...(m.toolCalls || []),
-                                { id: toolId, name: parsed.name, input: parsed.input, status: "running" },
-                              ],
-                            }
-                          : m
-                      )
-                    );
-                  } else if (parsed.type === "tool_result") {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId
-                          ? {
-                              ...m,
-                              toolCalls: (m.toolCalls || []).map((tc, idx) =>
-                                idx === (m.toolCalls?.length || 1) - 1
-                                  ? { ...tc, output: parsed.output, status: "completed" }
-                                  : tc
-                              ),
-                            }
-                          : m
-                      )
-                    );
-                  } else if (parsed.content) {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId ? { ...m, content: m.content + parsed.content } : m
-                      )
-                    );
-                  } else if (parsed.type === "reasoning") {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId ? { ...m, reasoning: (m.reasoning || "") + parsed.content } : m
-                      )
-                    );
-                  }
-                } else {
-                  if (parsed.content) {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId ? { ...m, content: m.content + parsed.content } : m
-                      )
-                    );
-                  } else if (parsed.type === "reasoning") {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === aiMessageId ? { ...m, reasoning: (m.reasoning || "") + parsed.content } : m
-                      )
-                    );
-                  }
+                if (parsed.type === "reasoning" && parsed.content) {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== aiMessageId) return m;
+                      const blocks = m.blocks || [];
+                      const lastBlock = blocks[blocks.length - 1];
+                      
+                      if (lastBlock && lastBlock.type === "reasoning") {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks.slice(0, -1),
+                            { ...lastBlock, content: lastBlock.content + parsed.content },
+                          ],
+                        };
+                      } else {
+                        const newBlocks = [...blocks];
+                        if (newBlocks.length > 0 && newBlocks[newBlocks.length - 1].type !== "text") {
+                          newBlocks[newBlocks.length - 1] = {
+                            ...newBlocks[newBlocks.length - 1],
+                            isCollapsed: true
+                          };
+                        }
+                        return {
+                          ...m,
+                          blocks: [
+                            ...newBlocks,
+                            { id: `block-${blockIdCounter++}`, type: "reasoning", content: parsed.content, isCollapsed: false },
+                          ],
+                        };
+                      }
+                    })
+                  );
+                }
+
+                if (parsed.type === "text" && parsed.content) {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== aiMessageId) return m;
+                      const blocks = m.blocks || [];
+                      const lastBlock = blocks[blocks.length - 1];
+                      
+                      if (lastBlock && lastBlock.type === "text") {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks.slice(0, -1),
+                            { ...lastBlock, content: lastBlock.content + parsed.content },
+                          ],
+                        };
+                      } else {
+                        const newBlocks = [...blocks];
+                        if (newBlocks.length > 0 && newBlocks[newBlocks.length - 1].type !== "text") {
+                          newBlocks[newBlocks.length - 1] = {
+                            ...newBlocks[newBlocks.length - 1],
+                            isCollapsed: true
+                          };
+                        }
+                        return {
+                          ...m,
+                          blocks: [
+                            ...newBlocks,
+                            { id: `block-${blockIdCounter++}`, type: "text", content: parsed.content },
+                          ],
+                        };
+                      }
+                    })
+                  );
+                }
+
+                if (parsed.type === "tool_call") {
+                  const toolInput = typeof parsed.input === 'string' ? parsed.input : JSON.stringify(parsed.input);
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== aiMessageId) return m;
+                      const blocks = [...(m.blocks || [])];
+                      if (blocks.length > 0 && blocks[blocks.length - 1].type !== "text") {
+                        blocks[blocks.length - 1] = {
+                          ...blocks[blocks.length - 1],
+                          isCollapsed: true
+                        };
+                      }
+                      return {
+                        ...m,
+                        blocks: [
+                          ...blocks,
+                          {
+                            id: `block-${blockIdCounter++}`,
+                            type: "tool-call",
+                            name: parsed.name,
+                            input: toolInput,
+                            status: "running",
+                            isCollapsed: false,
+                          },
+                        ],
+                      };
+                    })
+                  );
+                }
+
+                if (parsed.type === "tool_result") {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== aiMessageId) return m;
+                      const blocks = m.blocks || [];
+                      const lastBlock = blocks[blocks.length - 1];
+                      if (lastBlock && lastBlock.type === "tool-call") {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks.slice(0, -1),
+                            { ...lastBlock, type: "tool-result", output: parsed.output, status: "completed", isCollapsed: false },
+                          ],
+                        };
+                      } else {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks,
+                            {
+                              id: `block-${blockIdCounter++}`,
+                              type: "tool-result",
+                              name: parsed.toolName,
+                              output: parsed.output,
+                              status: "completed",
+                            },
+                          ],
+                        };
+                      }
+                    })
+                  );
+                }
+
+                if (parsed.type === "tool_error") {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== aiMessageId) return m;
+                      const blocks = m.blocks || [];
+                      const lastBlock = blocks[blocks.length - 1];
+                      if (lastBlock && lastBlock.type === "tool-call") {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks.slice(0, -1),
+                            { ...lastBlock, type: "tool-result", output: parsed.error, status: "error", isCollapsed: false },
+                          ],
+                        };
+                      } else {
+                        return {
+                          ...m,
+                          blocks: [
+                            ...blocks,
+                            {
+                              id: `block-${blockIdCounter++}`,
+                              type: "tool-result",
+                              name: parsed.toolName,
+                              output: parsed.error,
+                              status: "error",
+                            },
+                          ],
+                        };
+                      }
+                    })
+                  );
                 }
               } catch (e) {
                 console.error("Error parsing chunk:", e);
@@ -486,7 +590,7 @@ export function ChatContainer() {
 
                       {isTyping && !allSubagentsDone && (
                         <div className="flex justify-start">
-                          <div className="flex items-start gap-3 max-w-[85%]">
+                          <div className="flex items-start gap-3 max-w-[85%] w-[85%]">
                             <div className="w-8 h-8 flex items-center justify-center shrink-0">
                               <Bot className="w-5 h-5 text-foreground" />
                             </div>
@@ -526,7 +630,7 @@ export function ChatContainer() {
                       ))}
                       {isTyping && (
                         <div className="flex justify-start">
-                          <div className="flex items-start gap-3 max-w-[85%]">
+                          <div className="flex items-start gap-3 max-w-[85%] w-[85%]">
                             <div className="w-8 h-8 flex items-center justify-center shrink-0">
                               <Bot className="w-5 h-5 text-foreground" />
                             </div>
