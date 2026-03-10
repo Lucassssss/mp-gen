@@ -58,7 +58,7 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
       customStyle={{
         margin: 0,
         padding: "1rem",
-        backgroundColor: "hsl(var(--secondary))",
+        // backgroundColor: "hsl(var(--secondary))",
         borderRadius: "4px",
       }}
     >

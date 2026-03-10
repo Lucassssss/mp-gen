@@ -1,10 +1,10 @@
 import { deepseek, DeepSeekLanguageModelOptions } from '@ai-sdk/deepseek';
 import { createMinimax } from 'vercel-minimax-ai-provider';
-import { ModelMessage, stepCountIs, streamText, ToolSet } from 'ai';
+import { ModelMessage, stepCountIs, streamText, ToolLoopAgent, ToolSet } from 'ai';
 import { tools } from '../tools/index.js';
 import { theStartupFoundersLastStandPrompt } from '../prompts/index.js';
 import "dotenv/config";
-
+console.log(process.env)
 // const toolMap = Object.fromEntries(tools.map((t: any) => [t.name, t]));
 
 const modelSelector = (modelName: string) => {
@@ -24,27 +24,67 @@ const modelSelector = (modelName: string) => {
   }
 }
 
+const createToolAgent = (modelName: string) => new ToolLoopAgent({
+  model: modelSelector(modelName),
+  tools: tools,
+});
+
 export const runChat = async (
   messages: ModelMessage[],
   modelName: string = "reasoner",
   res,
 ) => {
   const isReasoner = modelName === "reasoner";
-  
-  const result = streamText({
+  const agent = createToolAgent(modelName);
+    const result = await agent.stream({
+  // const result = streamText({
     // model: deepseek(isReasoner ? 'deepseek-reasoner' : 'deepseek-chat'),
-    system: theStartupFoundersLastStandPrompt,
-    model: modelSelector(modelName),
+    // prompt: theStartupFoundersLastStandPrompt,
+    // model: modelSelector(modelName),
     messages: messages,
-    ...(isReasoner ? {
-      providerOptions: {
-        deepseek: {
-          thinking: { type: 'enabled' },
-        } satisfies DeepSeekLanguageModelOptions,
-      },
-    } : {}),
-    tools: tools,
-    stopWhen: stepCountIs(100),
+    // ...(isReasoner ? {
+      // providerOptions: {
+      //   deepseek: {
+      //     thinking: { type: 'enabled' },
+      //   } satisfies DeepSeekLanguageModelOptions,
+      // },
+    // } : {}),
+    // tools: tools,
+    // stopWhen: stepCountIs(100),
+
+    experimental_onStart({ model, functionId }) {
+      console.log('Agent started', { model: model.modelId, functionId });
+    },
+
+    experimental_onStepStart({ stepNumber, model }) {
+      console.log(`Step ${stepNumber} starting`, { model: model.modelId });
+    },
+
+    experimental_onToolCallStart({ toolCall }) {
+      console.log(`Tool call starting: ${toolCall.toolName}`);
+    },
+
+    experimental_onToolCallFinish({ toolCall, durationMs, success }) {
+      console.log(`Tool call finished: ${toolCall.toolName} (${durationMs}ms)`, {
+        success,
+      });
+    },
+
+    onStepFinish({ stepNumber, usage, finishReason, toolCalls }) {
+      console.log(`Step ${stepNumber} completed:`, {
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        finishReason,
+        toolsUsed: toolCalls?.map(tc => tc.toolName),
+      });
+    },
+
+    onFinish({ totalUsage, steps }) {
+      console.log('Agent finished:', {
+        totalSteps: steps.length,
+        totalTokens: totalUsage.totalTokens,
+      });
+    },
   });
 
   for await (const part of result.fullStream) {
