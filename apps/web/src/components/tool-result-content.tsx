@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Hammer } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface ToolResultContentProps {
@@ -62,6 +62,7 @@ export function ToolResultContent({ name, input, output, status = "running", isC
               <ChevronDown className="w-3.5 h-3.5 ml-auto" />
             )}
           </span>
+          <Hammer className="w-3.5 h-3.5" />
         <span className="">工具调用 ( {name} ) </span>
         </div>
         {getStatusDot()}

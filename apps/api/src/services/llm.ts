@@ -2,6 +2,7 @@ import { deepseek, DeepSeekLanguageModelOptions } from '@ai-sdk/deepseek';
 import { createMinimax } from 'vercel-minimax-ai-provider';
 import { ModelMessage, stepCountIs, streamText, ToolSet } from 'ai';
 import { tools } from '../tools/index.js';
+import { theStartupFoundersLastStandPrompt } from '../prompts/index.js';
 import "dotenv/config";
 
 // const toolMap = Object.fromEntries(tools.map((t: any) => [t.name, t]));
@@ -32,6 +33,7 @@ export const runChat = async (
   
   const result = streamText({
     // model: deepseek(isReasoner ? 'deepseek-reasoner' : 'deepseek-chat'),
+    system: theStartupFoundersLastStandPrompt,
     model: modelSelector(modelName),
     messages: messages,
     ...(isReasoner ? {
