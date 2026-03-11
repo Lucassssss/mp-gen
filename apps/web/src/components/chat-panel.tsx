@@ -1,0 +1,435 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChatMessage, type Message } from "./chat-message";
+import { 
+  Bot, 
+  Sparkles, 
+  Send, 
+  Loader2, 
+  ChevronDown,
+  Plus,
+  Paperclip,
+  Zap,
+  Globe,
+  Cpu,
+  Sparkles as SparklesIcon
+} from "lucide-react";
+import { useConversationStore } from "@/hooks/useConversations";
+import { cn } from "@/lib/utils";
+
+const API_BASE = "http://localhost:3001";
+
+type ChatMode = "auto" | "agent" | "manual" | "deep-agent";
+
+interface StreamingMessage extends Message {
+  isComplete: boolean;
+}
+
+const MODELS = [
+  { id: "deepseek/deepseek-chat", name: "DeepSeek Chat", provider: "DeepSeek" },
+  { id: "deepseek/deepseek-coder", name: "DeepSeek Coder", provider: "DeepSeek" },
+  { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
+  { id: "anthropic/claude-3-opus", name: "Claude 3 Opus", provider: "Anthropic" },
+];
+
+const AGENT_TYPES: { id: ChatMode; name: string; icon: React.ReactNode; description: string }[] = [
+  { 
+    id: "deep-agent", 
+    name: "深度代理", 
+    icon: <Zap className="w-4 h-4" />,
+    description: "多代理协同工作" 
+  },
+  { 
+    id: "agent", 
+    name: "智能代理", 
+    icon: <Bot className="w-4 h-4" />,
+    description: "单代理自动决策" 
+  },
+  { 
+    id: "manual", 
+    name: "手动模式", 
+    icon: <Cpu className="w-4 h-4" />,
+    description: "完全手动控制" 
+  },
+  { 
+    id: "auto", 
+    name: "自动模式", 
+    icon: <Globe className="w-4 h-4" />,
+    description: "自动选择最佳方案" 
+  },
+];
+
+export function ChatPanel() {
+  const { 
+    messages: storeMessages, 
+    currentConversation,
+  } = useConversationStore();
+  
+  const [messages, setMessages] = useState<StreamingMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<ChatMode>("deep-agent");
+  const [model, setModel] = useState<string>("deepseek/deepseek-chat");
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const [showAgentSelector, setShowAgentSelector] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const showDeepAgentUI = true;
+
+  useEffect(() => {
+    if (storeMessages && storeMessages.length > 0) {
+      setMessages(storeMessages.map(m => ({
+        ...m,
+        isComplete: true
+      })));
+    } else {
+      setMessages([]);
+    }
+  }, [storeMessages]);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      const scrollArea = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+      }
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage: StreamingMessage = {
+      id: `temp-${Date.now()}`,
+      role: "user",
+      content: input.trim(),
+      isComplete: true,
+      createdAt: Date.now(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: userMessage.content }],
+          conversationId: currentConversation?.id,
+          mode,
+          model,
+        }),
+      });
+
+      if (!response.ok) throw new Error("请求失败");
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("无法读取响应");
+
+      const assistantMessage: StreamingMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: "",
+        isComplete: false,
+        createdAt: Date.now(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg && lastMsg.role === "assistant") {
+              lastMsg.content += chunk;
+            }
+            return newMessages;
+          });
+        }
+      }
+
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastMsg = newMessages[newMessages.length - 1];
+        if (lastMsg && lastMsg.role === "assistant") {
+          lastMsg.isComplete = true;
+        }
+        return newMessages;
+      });
+    } catch (error) {
+      console.error("发送消息失败:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const currentModel = MODELS.find(m => m.id === model);
+  const currentAgent = AGENT_TYPES.find(a => a.id === mode);
+
+  return (
+    <div className="h-full flex flex-col bg-background">
+      {/* Header */}
+      <header className="px-6 py-4 border-b border-border/50 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-foreground">Aratifact</h1>
+            <p className="text-xs text-muted-foreground">AI 智能助手</p>
+          </div>
+        </div>
+      </header>
+
+      {/* 聊天内容区域 - 独立滚动 */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ScrollArea className="h-full" ref={scrollRef}>
+          <div className="px-6 py-8 max-w-4xl mx-auto">
+            {showDeepAgentUI ? (
+              <>
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+                      <SparklesIcon className="w-10 h-10 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-foreground mb-3">旅行规划助手</h2>
+                    <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                      告诉我你想去哪里旅行，我会派三个专业代理同时为你规划：天气、景点和预算！
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {messages.map((message, index) => (
+                      <div 
+                        key={message.id} 
+                        className="animate-slide-up"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <ChatMessage 
+                          message={message}
+                          isStreaming={!message.isComplete && message.role === "assistant"}
+                        />
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex items-center gap-3 px-4 py-3 animate-fade-in">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">AI 正在思考...</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+                      <Bot className="w-10 h-10 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-foreground mb-3">你好，我是 Aratifact</h2>
+                    <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                      有什么我可以帮助你的吗？
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {messages.map((message, index) => (
+                      <div 
+                        key={message.id} 
+                        className="animate-slide-up"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <ChatMessage 
+                          message={message}
+                          isStreaming={!message.isComplete && message.role === "assistant"}
+                        />
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex items-center gap-3 px-4 py-3 animate-fade-in">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">AI 正在思考...</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+      
+      {/* 输入框区域 - 固定底部 */}
+      <div className="p-4 shrink-0">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200 focus-within:shadow-md focus-within:border-primary/30 overflow-hidden">
+            
+            {/* 工具栏 */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border/30">
+              {/* 模型选择 */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowModelSelector(!showModelSelector);
+                    setShowAgentSelector(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors text-sm"
+                >
+                  <span className="text-muted-foreground">{currentModel?.provider}</span>
+                  <span className="font-medium">{currentModel?.name}</span>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                </button>
+                
+                {showModelSelector && (
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden z-50">
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-muted-foreground px-2 py-1">选择模型</p>
+                      {MODELS.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            setModel(m.id);
+                            setShowModelSelector(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors",
+                            model === m.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                          )}
+                        >
+                          <span className="text-xs text-muted-foreground">{m.provider}</span>
+                          <span className="flex-1 font-medium">{m.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 分隔线 */}
+              <div className="w-px h-4 bg-border/50" />
+
+              {/* Agent 类型选择 */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowAgentSelector(!showAgentSelector);
+                    setShowModelSelector(false);
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm",
+                    "hover:bg-muted"
+                  )}
+                >
+                  {currentAgent?.icon}
+                  <span>{currentAgent?.name}</span>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                </button>
+                
+                {showAgentSelector && (
+                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden z-50">
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-muted-foreground px-2 py-1">选择模式</p>
+                      {AGENT_TYPES.map((agent) => (
+                        <button
+                          key={agent.id}
+                          onClick={() => {
+                            setMode(agent.id);
+                            setShowAgentSelector(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors",
+                            mode === agent.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center",
+                            mode === agent.id ? "bg-primary/20" : "bg-muted"
+                          )}>
+                            {agent.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">{agent.name}</div>
+                            <div className="text-xs text-muted-foreground">{agent.description}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1" />
+
+              {/* 附件上传 */}
+              <button
+                className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="上传附件"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 输入区域 */}
+            <div className="relative flex items-end">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={showDeepAgentUI ? "请输入你想去的旅行目的地..." : "输入你的问题..."}
+                disabled={isLoading}
+                rows={1}
+                className="w-full min-h-[56px] max-h-[200px] p-4 pr-14 resize-none bg-transparent border-none outline-none text-sm"
+                style={{ borderRadius: '0' }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className={cn(
+                  "absolute right-2 bottom-2 p-2.5 rounded-xl transition-all duration-200",
+                  input.trim() && !isLoading
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -6,6 +6,7 @@ import { theStartupFoundersLastStandPrompt } from '../prompts/index.js';
 import "dotenv/config";
 import Model from './model.js';
 import Agent from './agent.js';
+import { streamDeepAgentUpdates } from './deep-agent.js';
 
 export const runChat = async (
   messages: ModelMessage[],
@@ -13,8 +14,10 @@ export const runChat = async (
   res,
   sessionId: string,
   mode: string = "auto",
+  onAssistantMessage?: (content: string, isComplete: boolean) => void,
 ) => {
   let result: any = null;
+  let assistantContent = "";
   
   messages = [{
     role: "system",
@@ -34,6 +37,10 @@ export const runChat = async (
       tools: tools,
       stopWhen: stepCountIs(100),
     });
+  } else if(mode === "deep-agent") {
+    await streamDeepAgentUpdates({ messages: messages as any }, res);
+    onAssistantMessage?.("", true);
+    return;
   }
 
   for await (const part of result.fullStream) {
@@ -42,6 +49,8 @@ export const runChat = async (
         res.write(`data: ${JSON.stringify({ type: "reasoning", content: part.text })}\n\n`);
         break;
       case 'text-delta':
+        assistantContent += part.text;
+        onAssistantMessage?.(assistantContent, false);
         res.write(`data: ${JSON.stringify({ type: "text", content: part.text })}\n\n`);
         break;
       case 'tool-call': {
@@ -73,4 +82,6 @@ export const runChat = async (
       }
     }
   }
+
+  onAssistantMessage?.(assistantContent, true);
 }

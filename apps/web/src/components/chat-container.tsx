@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { ChatMessage, type Message } from "./chat-message";
 import { SettingsPanel, SettingsButton } from "./settings-panel";
 import { Bot, Plus, ArrowUp, Sparkles } from "lucide-react";
+import { useConversationStore } from "@/hooks/useConversations";
 import {
   InputGroup,
   InputGroupAddon,
@@ -20,8 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type ChatMode = "auto" | "agent" | "manual" | "deep-agent";
-
-const SESSION_ID = "default";
 
 export interface ToolCall {
   id: string;
@@ -44,6 +43,14 @@ interface StreamingMessage extends Message {
 }
 
 export function ChatContainer() {
+  const { 
+    messages: storeMessages, 
+    currentConversation,
+    sending,
+    sendMessage,
+    clearCurrentMessages 
+  } = useConversationStore();
+  
   const [messages, setMessages] = useState<StreamingMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +60,17 @@ export function ChatContainer() {
   const [subagents, setSubagents] = useState<Subagent[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (storeMessages && storeMessages.length > 0) {
+      setMessages(storeMessages.map(m => ({
+        ...m,
+        isComplete: true,
+      })));
+    } else {
+      setMessages([]);
+    }
+  }, [storeMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -213,7 +231,7 @@ export function ChatContainer() {
           messages: [{ role: "user", content: userInput }],
           mode,
           model,
-          sessionId: SESSION_ID,
+          conversationId: currentConversation?.id,
         }),
       });
 
@@ -463,9 +481,9 @@ export function ChatContainer() {
   const allSubagentsDone = subagents.length > 0 && completedSubagents === subagents.length;
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      <Card className="border-border shadow-sm bg-card min-h-screen border-l">
-        <CardHeader className="px-6 py-4 border-b py-2">
+    <div className="w-full min-w-0">
+      <Card className="border-border shadow-sm bg-card h-full border-l flex flex-col">
+        <CardHeader className="px-6 py-4 border-b py-2 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 flex items-center justify-center">
@@ -480,8 +498,8 @@ export function ChatContainer() {
             <SettingsButton onClick={() => setSettingsOpen(true)} />
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea ref={scrollRef} className="h-[80vh]">
+        <CardContent className="p-0 flex-1 min-h-0">
+          <ScrollArea ref={scrollRef} className="h-full">
             <div className="p-6">
               {showDeepAgentUI ? (
                 <>
@@ -590,7 +608,7 @@ export function ChatContainer() {
 
                       {isTyping && !allSubagentsDone && (
                         <div className="flex justify-start">
-                          <div className="flex items-start gap-3 max-w-[85%] w-[85%]">
+                          <div className="flex items-start gap-3 max-w-[85%] w-full">
                             <div className="w-8 h-8 flex items-center justify-center shrink-0">
                               <Bot className="w-5 h-5 text-foreground" />
                             </div>
@@ -630,7 +648,7 @@ export function ChatContainer() {
                       ))}
                       {isTyping && (
                         <div className="flex justify-start">
-                          <div className="flex items-start gap-3 max-w-[85%] w-[85%]">
+                          <div className="flex items-start gap-3 max-w-[85%] w-full">
                             <div className="w-8 h-8 flex items-center justify-center shrink-0">
                               <Sparkles className="w-5 h-5 text-muted-foreground" fill="#00d492" strokeWidth={0}/>
                               {/* <Bot className="w-5 h-5 text-foreground" /> */}
@@ -652,8 +670,8 @@ export function ChatContainer() {
             </div>
           </ScrollArea>
         </CardContent>
-        <CardFooter className="p-4 border-t">
-          <div className="w-full">
+        <CardFooter className="p-4 border-t shrink-0">
+          <div className="w-full min-w-0">
             <InputGroup className="border-input">
               <InputGroupTextarea
                 ref={textareaRef}

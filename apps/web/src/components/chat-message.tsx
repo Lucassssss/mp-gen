@@ -26,9 +26,11 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  timestamp: number | Date;
   isComplete?: boolean;
   blocks?: MessageBlock[];
+  reasoning?: string;
+  toolCalls?: any[];
 }
 
 interface ChatMessageProps {
@@ -301,7 +303,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
           </div>
           <div className="flex items-center gap-2 mt-1.5 px-1">
             <span className="text-xs text-muted-foreground">
-              {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
             {!isUser && copied && (
               <span className="text-xs text-muted-foreground">已复制</span>
