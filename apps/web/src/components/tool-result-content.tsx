@@ -55,6 +55,8 @@ export function ToolResultContent({ name, input, output, status = "running", isC
         className="flex text-xs items-center justify-between gap-2 w-full font-normal bg-zinc-50 dark:bg-zinc-800"
       >
         <div className="flex items-center gap-2">
+          <Hammer className="w-3.5 h-3.5" />
+        <span className="">工具 ( {name} ) </span>
           <span>
               {isCollapsed ? (
               <ChevronRight className="w-3.5 h-3.5 ml-auto" />
@@ -62,8 +64,6 @@ export function ToolResultContent({ name, input, output, status = "running", isC
               <ChevronDown className="w-3.5 h-3.5 ml-auto" />
             )}
           </span>
-          <Hammer className="w-3.5 h-3.5" />
-        <span className="">工具调用 ( {name} ) </span>
         </div>
         {getStatusDot()}
       </Button>

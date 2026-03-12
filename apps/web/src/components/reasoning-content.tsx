@@ -36,16 +36,19 @@ export function ReasoningContent({ reasoning, isComplete = true, isCollapsed: ex
         variant="ghost"
         className="flex text-xs text-gray-500 items-center gap-1.5 w-full justify-start bg-zinc-100 dark:bg-neutral-800 font-normal"
       >
+        <Brain className="w-3.5 h-3.5" />
+        <span className="inline-block vertical-align-middle">{
+          isComplete ? "已思考" : isCollapsed ? "已思考" : "思考中..."
+        }</span>
+        {/* {isComplete && (
+          <span className="text-amber-500 ml-1">(已折叠)</span>
+        )} */}
+
         {isCollapsed ? (
           <ChevronRight className="w-3.5 h-3.5" />
         ) : (
           <ChevronDown className="w-3.5 h-3.5" />
         )}
-        <Brain className="w-3.5 h-3.5" />
-        <span className="inline-block vertical-align-middle">思考过程</span>
-        {/* {isComplete && (
-          <span className="text-amber-500 ml-1">(已折叠)</span>
-        )} */}
       </Button>
       
       {!isCollapsed && (

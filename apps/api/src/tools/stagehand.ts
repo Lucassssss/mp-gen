@@ -10,7 +10,8 @@ async function getStagehand() {
     stagehandInstance = new Stagehand({
       env: "LOCAL",
       model: "deepseek/deepseek-chat",
-      verbose: 1,
+      // verbose: 1,
+      cacheDir: "agent-cache",
     });
     await stagehandInstance.init();
   }

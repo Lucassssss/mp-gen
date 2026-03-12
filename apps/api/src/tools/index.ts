@@ -2,7 +2,7 @@ import { tool, ToolSet } from "ai";
 import { z } from "zod";
 import type { ToolDefinition } from "../types/index.js";
 import { stagehandTool, navigateTool, extractTool, observeTool } from "./stagehand.js";
-import { bash, readFile, writeFile } from "./bash.js";
+import { bash } from "./bash.js";
 
 const calculatorTool = tool({
   description: "计算数学表达式的值",
@@ -47,8 +47,6 @@ export const tools: ToolSet = {
   extractTool,
   observeTool,
   bash: bash as any,
-  readFile: readFile as any,
-  writeFile: writeFile as any,
 };
 
 // export function getToolDefinitions(): ToolDefinition[] {
