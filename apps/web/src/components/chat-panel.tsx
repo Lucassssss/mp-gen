@@ -601,9 +601,9 @@ export function ChatPanel() {
                 </button>
                 
                 {showModelSelector && (
-                  <div className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-[100]">
+                  <div className="absolute bottom-full left-0 mb-2 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-[100]">
                     <div className="p-2">
-                      <p className="text-xs font-medium text-muted-foreground px-2 py-1">选择模型</p>
+                      <p className="text-sm font-medium text-muted-foreground px-2 py-1">选择模型</p>
                       {MODELS.map((m) => (
                         <button
                           key={m.id}
@@ -617,8 +617,8 @@ export function ChatPanel() {
                             model === m.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
                           )}
                         >
-                          <span className="text-xs text-muted-foreground">{m.provider}</span>
-                          <span className="flex-1 font-medium">{m.name}</span>
+                          <span className="text-sm text-muted-foreground">{m.provider}</span>
+                          <span className="flex-1 text-sm font-medium text-ellipsis overflow-hidden whitespace-nowrap">{m.name}</span>
                         </button>
                       ))}
                     </div>
