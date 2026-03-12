@@ -102,7 +102,7 @@ export function ConversationsSidebar() {
                 )}
                 style={{ animationDelay: `${index * 30}ms` }}
               >
-                <div className={cn(
+                {/* <div className={cn(
                   "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
                   currentConversation?.id === conv.id 
                     ? "bg-primary/20" 
@@ -112,10 +112,10 @@ export function ConversationsSidebar() {
                     "w-4 h-4",
                     currentConversation?.id === conv.id ? "text-primary" : "text-muted-foreground"
                   )} />
-                </div>
+                </div> */}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm truncate font-medium">{conv.title}</div>
-                  <div className="text-xs text-muted-foreground/70">{formatDate(conv.updatedAt)}</div>
+                  {/* <div className="text-xs text-muted-foreground/70">{formatDate(conv.updatedAt)}</div> */}
                 </div>
                 <button
                   onClick={(e) => handleDelete(e, conv.id)}

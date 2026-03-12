@@ -34,7 +34,7 @@ export function ToolResultContent({ name, input, output, status = "running", isC
       case "error":
         return "bg-red-50 dark:bg-red-800 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400";
       default:
-        return "text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
+        return "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400";
     }
   };
 
@@ -43,7 +43,7 @@ export function ToolResultContent({ name, input, output, status = "running", isC
       ? "bg-blue-500" 
       : status === "error" 
         ? "bg-red-500" 
-        : "bg-green-500";
+        : "bg-zinc-500";
     return <span className={`w-1 h-1 rounded-full ${colorClass}`} />;
   };
 

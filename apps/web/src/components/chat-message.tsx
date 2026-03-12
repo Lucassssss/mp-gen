@@ -60,7 +60,7 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
 
   if (inline) {
     return (
-      <code className="px-1 py-0.5 bg-muted rounded text-sm font-mono text-foreground">
+      <code className="px-1 py-0.5 bg-muted rounded text-sm font-mono text-foreground break-all">
         {children}
       </code>
     );
@@ -72,11 +72,10 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
       style={oneDark as any}
       language={match?.[1] || "text"}
       PreTag="div"
-      className="rounded text-sm my-3"
+      className="rounded text-sm my-3 overflow-x-auto"
       customStyle={{
         margin: 0,
         padding: "1rem",
-        // backgroundColor: "hsl(var(--secondary))",
         borderRadius: "4px",
       }}
     >
@@ -97,7 +96,7 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
 
   return (
     <div className={isUser ? "flex justify-end" : "flex justify-start"}>
-      <div className={`flex gap-3 max-w-[85%] w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+      <div className={`flex gap-3 max-w-[85%] w-[85%] break-all ${isUser ? "flex-row-reverse" : ""}`}>
         <div className="w-9 h-9 flex items-center justify-center shrink-0">
           {isUser ? (
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-sm">
@@ -121,11 +120,11 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
             style={{ borderRadius: "4px" }}
           >
             {isUser ? (
-              <div className="whitespace-pre-wrap leading-relaxed">
+              <div className="whitespace-pre-wrap leading-relaxed break-words overflow-hidden">
                 {message.content}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 break-words overflow-hidden">
                 {message.blocks && message.blocks.length > 0 ? (
                   message.blocks.map((block) => {
                     if (block.type === "reasoning") {
@@ -140,7 +139,7 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
                     }
                     if (block.type === "text") {
                       return (
-                        <div key={block.id} className="markdown-content leading-relaxed">
+                        <div key={block.id} className="markdown-content leading-relaxed break-words break-all overflow-hidden whitespace-pre-wrap">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{

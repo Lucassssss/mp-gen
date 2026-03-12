@@ -545,9 +545,9 @@ export function ChatContainer() {
                             )}
                           </div>
 
-                          <div className="h-1.5 bg-neutral-800 rounded-full mb-4 overflow-hidden">
+                          <div className="h-1.5 bg-zinc-800 rounded-full mb-4 overflow-hidden">
                             <div
-                              className="h-full bg-linear-to-r from-sky-500 via-amber-500 to-emerald-500 transition-all duration-500"
+                              className="h-full bg-linear-to-r from-blue-500 via-violet-500 to-zinc-500 transition-all duration-500"
                               style={{ width: `${(completedSubagents / subagents.length) * 100}%` }}
                             />
                           </div>
@@ -558,37 +558,37 @@ export function ChatContainer() {
                                 key={subagent.id}
                                 className={`
                                   relative flex flex-col h-full rounded-2xl border-2 transition-all duration-300
-                                  ${subagent.status === "complete" ? "border-emerald-500/40 bg-emerald-950/30" : ""}
-                                  ${subagent.status === "running" ? "border-amber-500/40 bg-amber-950/30" : ""}
-                                  ${subagent.status === "error" ? "border-red-500/40 bg-red-950/30" : ""}
-                                  ${subagent.status === "pending" ? "border-neutral-700 bg-neutral-900/30" : ""}
+                                  ${subagent.status === "complete" ? "border-zinc-500/40 bg-zinc-900/30" : ""}
+                                  ${subagent.status === "running" ? "border-blue-500/40 bg-blue-900/20" : ""}
+                                  ${subagent.status === "error" ? "border-red-500/40 bg-red-900/20" : ""}
+                                  ${subagent.status === "pending" ? "border-zinc-700 bg-zinc-900/30" : ""}
                                 `}
                               >
-                                <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800/50">
+                                <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/50">
                                   <div className={`
                                     w-10 h-10 rounded-xl flex items-center justify-center
-                                    ${subagent.status === "complete" ? "bg-emerald-500/20 text-emerald-400" : ""}
-                                    ${subagent.status === "running" ? "bg-amber-500/20 text-amber-400 animate-pulse" : ""}
+                                    ${subagent.status === "complete" ? "bg-zinc-500/20 text-zinc-400" : ""}
+                                    ${subagent.status === "running" ? "bg-blue-500/20 text-blue-400 animate-pulse" : ""}
                                     ${subagent.status === "error" ? "bg-red-500/20 text-red-400" : ""}
-                                    ${subagent.status === "pending" ? "bg-neutral-700/20 text-neutral-500" : ""}
+                                    ${subagent.status === "pending" ? "bg-zinc-700/20 text-zinc-500" : ""}
                                   `}>
                                     {subagent.status === "complete" ? "✓" : subagent.status === "running" ? "⚙️" : subagent.status === "error" ? "✗" : "⏳"}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h3 className={`font-semibold ${subagent.status === "complete" ? "text-emerald-400" : subagent.status === "running" ? "text-amber-400" : "text-neutral-400"}`}>
+                                    <h3 className={`font-semibold ${subagent.status === "complete" ? "text-zinc-400" : subagent.status === "running" ? "text-blue-400" : "text-zinc-400"}`}>
                                       {subagent.name}
                                     </h3>
-                                    <p className="text-xs text-neutral-500 truncate">{subagent.description}</p>
+                                    <p className="text-xs text-zinc-500 truncate">{subagent.description}</p>
                                   </div>
                                 </div>
                                 <div className="flex-1 px-4 py-4 min-h-0 max-h-32 overflow-y-auto">
                                   {subagent.result ? (
-                                    <div className="text-sm text-neutral-300 whitespace-pre-wrap">
+                                    <div className="text-sm text-zinc-300 whitespace-pre-wrap">
                                       {subagent.result.slice(0, 300)}
                                       {subagent.result.length > 300 && "..."}
                                     </div>
                                   ) : subagent.status === "running" ? (
-                                    <div className="flex items-center gap-2 text-neutral-500 animate-pulse">
+                                    <div className="flex items-center gap-2 text-zinc-500 animate-pulse">
                                       <span>工作中...</span>
                                     </div>
                                   ) : null}

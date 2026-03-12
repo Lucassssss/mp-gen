@@ -28,10 +28,10 @@ export function SubagentPipeline({
             <Sparkles className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <h3 className="font-medium text-neutral-200">
+            <h3 className="font-medium text-zinc-200">
               Specialist Agents Working
             </h3>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-zinc-500">
               {completedCount}/{totalCount} completed
             </p>
           </div>
@@ -45,9 +45,9 @@ export function SubagentPipeline({
         )}
       </div>
 
-      <div className="h-1.5 bg-neutral-800 rounded-full mb-4 overflow-hidden">
+      <div className="h-1.5 bg-zinc-800 rounded-full mb-4 overflow-hidden">
         <div
-          className="h-full bg-linear-to-r from-sky-500 via-amber-500 to-emerald-500 transition-all duration-500"
+          className="h-full bg-linear-to-r from-blue-500 via-violet-500 to-zinc-500 transition-all duration-500"
           style={{ width: `${(completedCount / totalCount) * 100}%` }}
         />
       </div>

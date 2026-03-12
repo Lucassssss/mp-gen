@@ -437,12 +437,12 @@ export function ChatPanel() {
       {/* Header */}
       <header className="px-6 py-4 border-b border-border/50 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+          {/* <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-primary" />
-          </div>
+          </div> */}
           <div>
             <h1 className="text-lg font-semibold text-foreground">Aratifact</h1>
-            <p className="text-xs text-muted-foreground">AI 智能助手</p>
+            {/* <p className="text-xs text-muted-foreground">AI 智能助手</p> */}
           </div>
         </div>
       </header>
@@ -450,7 +450,7 @@ export function ChatPanel() {
       {/* 聊天内容区域 - 独立滚动 */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full" ref={scrollRef}>
-          <div className="px-6 py-8 max-w-4xl mx-auto">
+          <div className="px-6 py-8 w-full">
             {showDeepAgentUI ? (
               <>
                 {(messages.length === 0 && !storeLoading) ? (
@@ -609,7 +609,7 @@ export function ChatPanel() {
                           key={m.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setModel(m.id);
+                            setModel(m.id); 
                             setShowModelSelector(false);
                           }}
                           className={cn(

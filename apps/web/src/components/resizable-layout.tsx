@@ -15,10 +15,10 @@ interface ResizableLayoutProps {
 }
 
 export function ResizableLayout({
-  defaultSidebarWidth = 280,
-  defaultArtifactWidth = 400,
+  defaultSidebarWidth = 220,
+  defaultArtifactWidth = 800,
   minSidebarWidth = 200,
-  minArtifactWidth = 300,
+  minArtifactWidth = 640,
 }: ResizableLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = React.useState(defaultSidebarWidth);
   const [artifactWidth, setArtifactWidth] = React.useState(defaultArtifactWidth);
@@ -74,7 +74,7 @@ export function ResizableLayout({
       {/* Sidebar */}
       <aside 
         className={cn(
-          "shrink-0 bg-card flex flex-col transition-all duration-300 ease-out",
+          "shrink-0 bg-card bg-zinc-50 border-r border-border/50 flex flex-col transition-all duration-300 ease-out",
           isSidebarCollapsed ? "w-0 overflow-hidden" : ""
         )}
         style={{ width: isSidebarCollapsed ? 0 : sidebarWidth }}
@@ -126,7 +126,7 @@ export function ResizableLayout({
       {/* Artifact Panel */}
       <aside 
         className={cn(
-          "shrink-0 bg-card flex flex-col transition-all duration-300 ease-out",
+          "shrink-0 bg-card bg-zinc-50 border-l border-border/50 flex flex-col transition-all duration-300 ease-out",
           isArtifactCollapsed ? "w-0 overflow-hidden" : ""
         )}
         style={{ width: isArtifactCollapsed ? 0 : artifactWidth }}

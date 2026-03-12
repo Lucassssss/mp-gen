@@ -70,11 +70,11 @@ const SUBAGENT_CONFIGS: Record<
   "budget-optimizer": {
     icon: <PiggyBank className="w-5 h-5" />,
     title: "Budget Optimizer",
-    gradient: "from-emerald-500/20 to-teal-600/20",
-    borderColor: "border-emerald-500/40",
-    bgColor: "bg-emerald-950/30",
-    iconBg: "bg-emerald-500/20",
-    accentColor: "text-emerald-400",
+    gradient: "from-zinc-500/20 to-zinc-600/20",
+    borderColor: "border-zinc-500/40",
+    bgColor: "bg-zinc-900/30",
+    iconBg: "bg-zinc-500/20",
+    accentColor: "text-zinc-400",
   },
 };
 
@@ -109,7 +109,7 @@ function StatusIcon({
     case "running":
       return <Loader2 className={`w-4 h-4 animate-spin ${accentColor}`} />;
     case "complete":
-      return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+      return <CheckCircle2 className="w-4 h-4 text-zinc-400" />;
     case "error":
       return <AlertCircle className="w-4 h-4 text-red-400" />;
     default:
