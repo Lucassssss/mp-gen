@@ -14,10 +14,22 @@ import {
   Globe,
   Cpu,
   Sparkles as SparklesIcon,
-  ArrowUp
+  ArrowUp,
+  PanelLeft,
+  PanelRight,
+  PanelLeftClose,
+  PanelRightClose,
+  MessageSquare
 } from "lucide-react";
 import { useConversationStore } from "@/hooks/useConversations";
 import { cn } from "@/lib/utils";
+
+interface ChatPanelProps {
+  isSidebarCollapsed?: boolean;
+  isArtifactCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+  onToggleArtifact?: () => void;
+}
 
 const API_BASE = "http://localhost:3001";
 
@@ -54,7 +66,12 @@ const AGENT_TYPES: { id: ChatMode; name: string; icon: React.ReactNode; descript
   },
 ];
 
-export function ChatPanel() {
+export function ChatPanel({
+  isSidebarCollapsed = false,
+  isArtifactCollapsed = false,
+  onToggleSidebar,
+  onToggleArtifact,
+}: ChatPanelProps) {
   const { 
     messages: storeMessages, 
     currentConversation,
@@ -434,16 +451,65 @@ export function ChatPanel() {
 
   return (
     <div className="h-full flex flex-col bg-background" onClick={handleClickOutside}>
-      {/* Header */}
-      <header className="px-6 py-4 border-b border-border/50 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          {/* <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div> */}
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">Aratifact</h1>
-            {/* <p className="text-xs text-muted-foreground">AI 智能助手</p> */}
+      {/* Header - 面包屑样式布局 */}
+      <header className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50">
+        {/* 左侧：侧边栏按钮 + 对话标题 */}
+        <div className="flex items-center gap-2 min-w-0">
+          {/* 侧边栏切换按钮 */}
+          <button
+            onClick={onToggleSidebar}
+            className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+              isSidebarCollapsed 
+                ? "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground" 
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            )}
+            aria-label={isSidebarCollapsed ? "展开历史记录" : "收起历史记录"}
+            title={isSidebarCollapsed ? "展开历史记录" : "收起历史记录"}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeft className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* 分隔符 */}
+          <div className="w-px h-5 bg-border/50" />
+
+          {/* 对话图标和标题 */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <MessageSquare className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm font-medium text-foreground truncate">
+                {currentConversation?.title || "新对话"}
+              </h1>
+            </div>
           </div>
+        </div>
+
+        {/* 右侧：Artifact 按钮 */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onToggleArtifact}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm",
+              isArtifactCollapsed 
+                ? "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground" 
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            )}
+            aria-label={isArtifactCollapsed ? "展开 Artifact" : "收起 Artifact"}
+            title={isArtifactCollapsed ? "展开 Artifact" : "收起 Artifact"}
+          >
+            <span className="hidden sm:inline text-xs">Artifact</span>
+            {isArtifactCollapsed ? (
+              <PanelRight className="w-4 h-4" />
+            ) : (
+              <PanelRightClose className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </header>
 
@@ -460,7 +526,7 @@ export function ChatPanel() {
                     </div>
                     <h2 className="text-xl font-semibold text-foreground mb-3">旅行规划助手</h2>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      告诉我你想去哪里旅行，我会派三个专业代理同时为你规划：天气、景点和预算！
+                      告诉我���想去哪里旅行，我会派三个专业代理同时为你规划：天气、景点和预算！
                     </p>
                   </div>
                 ) : (
