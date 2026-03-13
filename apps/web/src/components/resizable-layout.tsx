@@ -3,8 +3,42 @@
 import * as React from "react";
 import { ConversationsSidebar } from "@/components/conversations-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
-import { ArtifactViewer } from "@/components/artifact-viewer";
+import { ArtifactPanel } from "@/components/artifact-panel";
 import { cn } from "@/lib/utils";
+
+// 布局状态缓存 key
+const LAYOUT_STORAGE_KEY = "resizable-layout-state";
+
+interface LayoutState {
+  sidebarWidth: number;
+  artifactWidth: number;
+  isSidebarCollapsed: boolean;
+  isArtifactCollapsed: boolean;
+}
+
+// 从 localStorage 读取布局状态
+function loadLayoutState(): LayoutState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Failed to load layout state:", e);
+  }
+  return null;
+}
+
+// 保存布局状态到 localStorage
+function saveLayoutState(state: LayoutState) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error("Failed to save layout state:", e);
+  }
+}
 
 interface ResizableLayoutProps {
   defaultSidebarWidth?: number;
@@ -23,6 +57,8 @@ export function ResizableLayout({
   minChatWidth = 400,
   maxChatWidth = 900,
 }: ResizableLayoutProps) {
+  // 初始化时尝试从缓存加载
+  const [isInitialized, setIsInitialized] = React.useState(false);
   const [sidebarWidth, setSidebarWidth] = React.useState(defaultSidebarWidth);
   const [artifactWidth, setArtifactWidth] = React.useState(defaultArtifactWidth);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
@@ -30,6 +66,29 @@ export function ResizableLayout({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const isDraggingSidebar = React.useRef(false);
   const isDraggingArtifact = React.useRef(false);
+
+  // 首次加载时从缓存恢复状态
+  React.useEffect(() => {
+    const saved = loadLayoutState();
+    if (saved) {
+      setSidebarWidth(saved.sidebarWidth);
+      setArtifactWidth(saved.artifactWidth);
+      setIsSidebarCollapsed(saved.isSidebarCollapsed);
+      setIsArtifactCollapsed(saved.isArtifactCollapsed);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  // 当状态变化时保存到缓存
+  React.useEffect(() => {
+    if (!isInitialized) return;
+    saveLayoutState({
+      sidebarWidth,
+      artifactWidth,
+      isSidebarCollapsed,
+      isArtifactCollapsed,
+    });
+  }, [sidebarWidth, artifactWidth, isSidebarCollapsed, isArtifactCollapsed, isInitialized]);
 
   const handleMouseMove = React.useCallback((e: MouseEvent) => {
     if (isDraggingSidebar.current && containerRef.current) {
@@ -112,7 +171,7 @@ export function ResizableLayout({
         />
       </section>
 
-      {/* Artifact Panel Drag Handle */}
+      {/* Artifact Panel Drag Handle - 只在展开时显示 */}
       {!isArtifactCollapsed && (
         <div className="relative flex items-center group">
           <div
@@ -123,16 +182,15 @@ export function ResizableLayout({
         </div>
       )}
 
-      {/* Artifact Panel */}
-      <aside 
-        className={cn(
-          "shrink-0 bg-card bg-zinc-50 border-l border-border/50 flex flex-col transition-all duration-300 ease-out",
-          isArtifactCollapsed ? "w-0 overflow-hidden" : ""
-        )}
-        style={{ width: isArtifactCollapsed ? 0 : artifactWidth }}
-      >
-        <ArtifactViewer artifacts={[]} />
-      </aside>
+      {/* Artifact Panel - 完全隐藏时不渲染 */}
+      {!isArtifactCollapsed && (
+        <aside 
+          className="shrink-0 bg-card bg-zinc-50 border-l border-border/50 flex flex-col transition-all duration-300 ease-out"
+          style={{ width: artifactWidth }}
+        >
+          <ArtifactPanel />
+        </aside>
+      )}
     </main>
   );
 }
