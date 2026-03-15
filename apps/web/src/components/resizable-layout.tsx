@@ -4,7 +4,9 @@ import * as React from "react";
 import { ConversationsSidebar } from "@/components/conversations-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
 import { ArtifactPanel } from "@/components/artifact-panel";
-import { SettingsDialog } from "@/components/settings-dialog";
+import { WebhooksDialog } from "@/components/settings/webhooks-dialog";
+import { SystemDialog } from "@/components/settings/system-dialog";
+import { AgentsDialog } from "@/components/settings/agents-dialog";
 import { cn } from "@/lib/utils";
 
 // 布局状态缓存 key
@@ -68,13 +70,23 @@ export function ResizableLayout({
   const isDraggingSidebar = React.useRef(false);
   const isDraggingArtifact = React.useRef(false);
   
-  // 设置对话框状态
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [settingsTab, setSettingsTab] = React.useState("webhooks");
+  // 各设置弹窗状态
+  const [webhooksOpen, setWebhooksOpen] = React.useState(false);
+  const [systemOpen, setSystemOpen] = React.useState(false);
+  const [agentsOpen, setAgentsOpen] = React.useState(false);
 
   const handleOpenSettings = (tab: string) => {
-    setSettingsTab(tab);
-    setSettingsOpen(true);
+    switch (tab) {
+      case "webhooks":
+        setWebhooksOpen(true);
+        break;
+      case "system":
+        setSystemOpen(true);
+        break;
+      case "agents":
+        setAgentsOpen(true);
+        break;
+    }
   };
 
   // 首次加载时从缓存恢复状态
