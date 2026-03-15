@@ -8,6 +8,8 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk-tools/artifacts": "^1.2.0",
+    "@ai-sdk-tools/store": "^1.2.0",
     "@ai-sdk/deepseek": "^2.0.24",
     "@browserbasehq/stagehand": "^3.1.0",
     "@langchain/core": "^1.1.31",

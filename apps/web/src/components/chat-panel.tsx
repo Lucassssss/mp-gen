@@ -524,9 +524,9 @@ export function ChatPanel({
                     <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
                       <SparklesIcon className="w-10 h-10 text-primary" />
                     </div>
-                    <h2 className="text-xl font-semibold text-foreground mb-3">旅行规划助手</h2>
+                    <h2 className="text-xl font-semibold text-foreground mb-3">Hi，我是G</h2>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      告诉我���想去哪里旅行，我会派三个专业代理同时为你规划：天气、景点和预算！
+                      我是一个全能AI助手，今天想做点什么呢?
                     </p>
                   </div>
                 ) : (

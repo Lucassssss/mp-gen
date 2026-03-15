@@ -8,6 +8,18 @@ import Model from './model.js';
 import Agent from './agent.js';
 import { streamDeepAgentUpdates } from './deep-agent.js';
 
+export interface ArtifactEvent {
+  type: 'artifact';
+  name: string;
+  data: any;
+  status: 'loading' | 'streaming' | 'complete' | 'error';
+  progress?: number;
+}
+
+export interface RunChatOptions {
+  onArtifact?: (event: ArtifactEvent) => void;
+}
+
 export const runChat = async (
   messages: ModelMessage[],
   modelName: string = "reasoner",
@@ -15,7 +27,9 @@ export const runChat = async (
   sessionId: string,
   mode: string = "auto",
   onAssistantMessage?: (content: string, isComplete: boolean) => void,
+  options?: RunChatOptions,
 ) => {
+  const { onArtifact } = options || {};
   let result: any = null;
   let assistantContent = "";
   
@@ -65,6 +79,37 @@ export const runChat = async (
       }
       case 'tool-result': {
         const outputStr = typeof part.output === 'object' ? JSON.stringify(part.output) : String(part.output || '');
+        
+        if (part.toolName && (
+          part.toolName === 'createCodeArtifact' || 
+          part.toolName === 'createDocumentArtifact' || 
+          part.toolName === 'createDataArtifact' || 
+          part.toolName === 'createTableArtifact'
+        )) {
+          try {
+            const outputData = typeof part.output === 'object' ? part.output : JSON.parse(String(part.output));
+            if (outputData && outputData.type === 'artifact') {
+              res.write(`data: ${JSON.stringify({ 
+                type: "artifact", 
+                artifactType: outputData.artifactType,
+                id: outputData.id,
+                title: outputData.title,
+                content: outputData.code || outputData.content || JSON.stringify(outputData.data || outputData.rows || ''),
+                language: outputData.language,
+                format: outputData.format,
+                data: outputData.data,
+                columns: outputData.columns,
+                rows: outputData.rows,
+                status: outputData.status || 'complete',
+                progress: outputData.progress || 1
+              })}\n\n`);
+              break;
+            }
+          } catch (e) {
+            console.error('Error parsing artifact output:', e);
+          }
+        }
+        
         res.write(`data: ${JSON.stringify({ 
           type: "tool_result", 
           toolName: part.toolName,

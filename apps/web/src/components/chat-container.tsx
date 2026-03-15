@@ -7,6 +7,7 @@ import { ChatMessage, type Message } from "./chat-message";
 import { SettingsPanel, SettingsButton } from "./settings-panel";
 import { Bot, Plus, ArrowUp, Sparkles } from "lucide-react";
 import { useConversationStore } from "@/hooks/useConversations";
+import { useArtifactStore, type Artifact } from "./artifact-panel";
 import {
   InputGroup,
   InputGroupAddon,
@@ -188,6 +189,23 @@ export function ChatContainer() {
                         : s
                     );
                   });
+                } else if (parsed.type === "artifact") {
+                  const artifactData: Artifact = {
+                    id: parsed.id || `artifact-${Date.now()}`,
+                    type: parsed.artifactType || 'code',
+                    title: parsed.title || 'Untitled',
+                    content: parsed.content || '',
+                    language: parsed.language,
+                    status: parsed.status || 'complete',
+                    progress: parsed.progress,
+                    metadata: {
+                      format: parsed.format,
+                      data: parsed.data,
+                      columns: parsed.columns,
+                      rows: parsed.rows,
+                    },
+                  };
+                  useArtifactStore.getState().addArtifact(artifactData);
                 } else if (parsed.type === "step") {
                   console.log(`[${parsed.source}] Step: ${parsed.step}`);
                 }
@@ -360,37 +378,102 @@ export function ChatContainer() {
                   );
                 }
 
+                if (parsed.type === "artifact") {
+                  const artifactData: Artifact = {
+                    id: parsed.id || `artifact-${Date.now()}`,
+                    type: parsed.artifactType || 'code',
+                    title: parsed.title || 'Untitled',
+                    content: parsed.content || '',
+                    language: parsed.language,
+                    status: parsed.status || 'complete',
+                    progress: parsed.progress,
+                    metadata: {
+                      format: parsed.format,
+                      data: parsed.data,
+                      columns: parsed.columns,
+                      rows: parsed.rows,
+                    },
+                  };
+                  useArtifactStore.getState().addArtifact(artifactData);
+                }
+
                 if (parsed.type === "tool_result") {
-                  setMessages((prev) =>
-                    prev.map((m) => {
-                      if (m.id !== aiMessageId) return m;
-                      const blocks = m.blocks || [];
-                      const lastBlock = blocks[blocks.length - 1];
-                      if (lastBlock && lastBlock.type === "tool-call") {
-                        return {
-                          ...m,
-                          blocks: [
-                            ...blocks.slice(0, -1),
-                            { ...lastBlock, type: "tool-result", output: parsed.output, status: "completed", isCollapsed: false },
-                          ],
-                        };
-                      } else {
-                        return {
-                          ...m,
-                          blocks: [
-                            ...blocks,
-                            {
-                              id: `block-${blockIdCounter++}`,
-                              type: "tool-result",
-                              name: parsed.toolName,
-                              output: parsed.output,
-                              status: "completed",
-                            },
-                          ],
-                        };
-                      }
-                    })
-                  );
+                  let artifactProcessed = false;
+                  
+                  try {
+                    const outputData = typeof parsed.output === 'string' 
+                      ? JSON.parse(parsed.output) 
+                      : parsed.output;
+                    
+                    if (outputData && outputData.type === 'artifact') {
+                      const artifactData: Artifact = {
+                        id: outputData.id || `artifact-${Date.now()}`,
+                        type: outputData.artifactType || 'code',
+                        title: outputData.title || 'Untitled',
+                        content: outputData.code || outputData.content || JSON.stringify(outputData.data || outputData),
+                        language: outputData.language,
+                        status: outputData.status || 'complete',
+                        progress: outputData.progress,
+                        metadata: outputData,
+                      };
+                      
+                      useArtifactStore.getState().addArtifact(artifactData);
+                      artifactProcessed = true;
+                    }
+                  } catch (e) {
+                    console.log('[Artifact] Not artifact data or parse failed');
+                  }
+                  
+                  if (artifactProcessed) {
+                    setMessages((prev) =>
+                      prev.map((m) => {
+                        if (m.id !== aiMessageId) return m;
+                        const blocks = m.blocks || [];
+                        const lastBlock = blocks[blocks.length - 1];
+                        if (lastBlock && lastBlock.type === "tool-call") {
+                          return {
+                            ...m,
+                            blocks: [
+                              ...blocks.slice(0, -1),
+                              { ...lastBlock, type: "tool-result", output: parsed.output, status: "completed", isCollapsed: false },
+                            ],
+                          };
+                        }
+                        return m;
+                      })
+                    );
+                  } else {
+                    setMessages((prev) =>
+                      prev.map((m) => {
+                        if (m.id !== aiMessageId) return m;
+                        const blocks = m.blocks || [];
+                        const lastBlock = blocks[blocks.length - 1];
+                        if (lastBlock && lastBlock.type === "tool-call") {
+                          return {
+                            ...m,
+                            blocks: [
+                              ...blocks.slice(0, -1),
+                              { ...lastBlock, type: "tool-result", output: parsed.output, status: "completed", isCollapsed: false },
+                            ],
+                          };
+                        } else {
+                          return {
+                            ...m,
+                            blocks: [
+                              ...blocks,
+                              {
+                                id: `block-${blockIdCounter++}`,
+                                type: "tool-result",
+                                name: parsed.toolName,
+                                output: parsed.output,
+                                status: "completed",
+                              },
+                            ],
+                          };
+                        }
+                      })
+                    );
+                  }
                 }
 
                 if (parsed.type === "tool_error") {
@@ -508,9 +591,9 @@ export function ChatContainer() {
                       <div className="w-12 h-12 flex items-center justify-center mb-4">
                         <Sparkles className="w-8 h-8 text-muted-foreground" />
                       </div>
-                      <h2 className="text-lg font-medium text-foreground mb-2">旅行规划助手</h2>
+                      <h2 className="text-lg font-medium text-foreground mb-2">Hi，我是G</h2>
                       <p className="text-sm text-muted-foreground max-w-xs">
-                        告诉我你想去哪里旅行，我会派三个专业代理同时为你规划：天气、景点和预算！
+                        我是一个全能AI助手，今天想做点什么呢?
                       </p>
                     </div>
                   ) : (

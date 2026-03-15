@@ -51,9 +51,11 @@ interface ResizableLayoutProps {
 
 export function ResizableLayout({
   defaultSidebarWidth = 220,
-  defaultArtifactWidth = 800,
+  defaultArtifactWidth = 700,
   minSidebarWidth = 200,
-  minArtifactWidth = 420,
+  minArtifactWidth = 640,
+  minChatWidth = 400,
+  maxChatWidth = 900,
 }: ResizableLayoutProps) {
   // 初始化时尝试从缓存加载
   const [isInitialized, setIsInitialized] = React.useState(false);
