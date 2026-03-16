@@ -254,7 +254,7 @@ export function ArtifactPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50">
+      <div className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50 dark:bg-background">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4e83fd] to-[#3370ff] flex items-center justify-center shrink-0">
             <Sparkles className="w-4 h-4 text-white" />

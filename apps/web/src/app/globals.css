@@ -56,8 +56,12 @@
     background-clip: text;
   }
 
-  .bg-gradient-primary-light {
-    background: linear-gradient(90deg, #f0f7fc 0%, #eef6ff 100%);
+  .bg-gradient {
+    background: linear-gradient(90deg, #e7f2f9 0%, #d7e5fb 20%, #beb8cd 100%);
+  }
+
+  .dark .bg-gradient {
+    background: linear-gradient(127deg, #3e2e4c 0%, #1e2638 20%, #303a43 100%);
   }
 
   .dark {

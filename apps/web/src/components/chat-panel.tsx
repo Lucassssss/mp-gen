@@ -459,7 +459,7 @@ export function ChatPanel({
   // 只渲染 Header
   if (headerOnly) {
     return (
-      <header className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50">
+      <header className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50 dark:bg-background">
         {/* 左侧：侧边栏按钮 + 对话标题 */}
         <div className="flex items-center gap-2 min-w-0">
           <button

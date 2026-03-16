@@ -127,7 +127,7 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-primary-light">
+    <div className="h-full flex flex-col bg-transparent">
       {/* Logo 区域 */}
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-2">
