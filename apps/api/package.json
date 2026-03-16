@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "debug": "bun --inspect-wait src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "build:bin": "bun build src/index.ts --compile --outfile .bin/server",
+    "run:bin": ".bin/server"
   },
   "dependencies": {
     "@ai-sdk-tools/artifacts": "^1.2.0",
