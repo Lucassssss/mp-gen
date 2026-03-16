@@ -11,7 +11,8 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
-  ListChecks
+  ListChecks,
+  Clock
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -130,10 +131,10 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
       {/* Logo 区域 */}
       <div className="px-3 py-2.5 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
             <Sparkles className="w-4 h-4 text-primary" />
           </div>
-          <h1 className="text-sm font-semibold text-foreground truncate">AI Assistant</h1>
+          <h1 className="text-sm font-semibold text-foreground truncate">Eclaw</h1>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
           className="w-full justify-start"
         >
           <Plus className="w-4 h-4" />
-          新对话
+          新任务
         </Button>
         <Button
           variant="ghost"
@@ -155,7 +156,7 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
           className="w-full justify-start"
         >
           <Bot className="w-4 h-4" />
-          AI 员工
+          Agents
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 ml-auto" />
         </Button>
         <Button
@@ -164,7 +165,16 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
           className="w-full justify-start"
         >
           <Link2 className="w-4 h-4" />
-          IM 配置
+          IM 频道
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 ml-auto" />
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => onOpenSettings?.("webhooks")}
+          className="w-full justify-start"
+        >
+          <Clock className="w-4 h-4" />
+          定时任务
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 ml-auto" />
         </Button>
         <Button
@@ -173,7 +183,7 @@ export function ConversationsSidebar({ onOpenSettings }: ConversationsSidebarPro
           className="w-full justify-start"
         >
           <Settings className="w-4 h-4" />
-          系统设置
+          设置
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 ml-auto" />
         </Button>
       </div>

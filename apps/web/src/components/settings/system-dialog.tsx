@@ -289,7 +289,7 @@ export function SystemDialog({ isOpen, onClose }: SystemDialogProps) {
                         value={settings.smtp.fromName}
                         onChange={(e) => updateSMTP({ fromName: e.target.value })}
                         className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
-                        placeholder="AI Assistant"
+                        placeholder="Eclaw"
                       />
                     </div>
                     <div className="col-span-2">

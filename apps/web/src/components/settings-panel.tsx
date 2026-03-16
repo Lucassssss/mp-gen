@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Settings, X, Moon, Sun, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useTheme } from "./theme-provider";
@@ -16,24 +16,7 @@ export function SettingsPanel({
   onClose,
   onClearChat,
 }: SettingsPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -63,7 +46,6 @@ export function SettingsPanel({
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-24">
       <div className="fixed inset-0 bg-background/80" />
       <div
-        ref={panelRef}
         className="relative w-full max-w-sm mx-4 bg-card border border-border shadow-sm"
         style={{ borderRadius: "4px" }}
       >
@@ -105,7 +87,7 @@ export function SettingsPanel({
 
         <div className="px-4 py-3 border-t border-border">
           <p className="text-xs text-muted-foreground text-center">
-            AI Assistant v1.0.0
+            Eclaw v1.0.0
           </p>
         </div>
       </div>

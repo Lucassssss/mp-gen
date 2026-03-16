@@ -574,7 +574,7 @@ export function ChatContainer() {
                 <Sparkles className="w-5 h-5" fill="#00d492" strokeWidth={0}/>
               </div>
               <div>
-                <h1 className="text-base font-medium text-foreground">AI Assistant</h1>
+                <h1 className="text-base font-medium text-foreground">Eclaw</h1>
                 {/* <p className="text-xs text-muted-foreground">Powered by DeepSeek</p> */}
               </div>
             </div>

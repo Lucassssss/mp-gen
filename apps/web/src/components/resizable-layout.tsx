@@ -4,11 +4,10 @@ import * as React from "react";
 import { ConversationsSidebar } from "@/components/conversations-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
 import { ArtifactPanel } from "@/components/artifact-panel";
-import { WebhooksDialog } from "@/components/settings/webhooks-dialog";
-import { SystemDialog } from "@/components/settings/system-dialog";
-import { AgentsDialog } from "@/components/settings/agents-dialog";
+import { WebhooksModal } from "@/components/modals/webhooks-modal";
+import { SystemModal } from "@/components/modals/system-modal";
+import { AgentsModal } from "@/components/modals/agents-modal";
 import { cn } from "@/lib/utils";
-import { SettingsDialog } from "./settings-dialog";
 
 // 布局状态缓存 key
 const LAYOUT_STORAGE_KEY = "resizable-layout-state";
@@ -75,23 +74,19 @@ export function ResizableLayout({
   const [webhooksOpen, setWebhooksOpen] = React.useState(false);
   const [systemOpen, setSystemOpen] = React.useState(false);
   const [agentsOpen, setAgentsOpen] = React.useState(false);
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [settingsTab, setSettingsTab] = React.useState("webhooks");
 
   const handleOpenSettings = (tab: string) => {
-    // switch (tab) {
-    //   case "webhooks":
-    //     setWebhooksOpen(true);
-    //     break;
-    //   case "system":
-    //     setSystemOpen(true);
-    //     break;
-    //   case "agents":
-    //     setAgentsOpen(true);
-    //     break;
-    // }
-    setSettingsTab(tab);
-    setSettingsOpen(true);
+    switch (tab) {
+      case "webhooks":
+        setWebhooksOpen(true);
+        break;
+      case "system":
+        setSystemOpen(true);
+        break;
+      case "agents":
+        setAgentsOpen(true);
+        break;
+    }
   };
 
   // 首次加载时从缓存恢复状态
@@ -238,11 +233,18 @@ export function ResizableLayout({
         )}
       </div>
 
-      {/* Settings Dialogs */}
-      <SettingsDialog 
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        initialTab={settingsTab}
+      {/* Settings Modals */}
+      <WebhooksModal
+        isOpen={webhooksOpen}
+        onClose={() => setWebhooksOpen(false)}
+      />
+      <SystemModal
+        isOpen={systemOpen}
+        onClose={() => setSystemOpen(false)}
+      />
+      <AgentsModal
+        isOpen={agentsOpen}
+        onClose={() => setAgentsOpen(false)}
       />
     </main>
   );
