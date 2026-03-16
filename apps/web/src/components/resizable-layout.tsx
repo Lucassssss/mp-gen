@@ -179,7 +179,11 @@ export function ResizableLayout({
         )}
 
         {/* Chat Area Container - 占满剩余空间 */}
-        <div className="p-3 pl-0 pr-1.5 flex-1 flex flex-col min-w-0 overflow-hidden bg-gradient-primary-light">
+        <div className={
+          isArtifactCollapsed
+          ? "p-3 pl-0 flex-1 pr-3 flex flex-col min-w-0 overflow-hidden bg-gradient-primary-light"
+          : "p-3 pl-0 pr-1.5 flex-1 flex flex-col min-w-0 overflow-hidden bg-gradient-primary-light"
+        }>
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white rounded-lg shadow-sm">
           {/* Header - 占满整个聊天区域宽度 */}
           <div className="w-full">
