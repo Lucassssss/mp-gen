@@ -1,2 +1,5 @@
 agent-cache
 .bin
+.env.local
+.env
+conversations.db
