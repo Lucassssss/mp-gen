@@ -21,7 +21,7 @@
 <br />
 
 <p align="center">
-  <img src="./docs/images/ScreenShot1.png" alt="Eclaw ScreenShot" width="800" />
+  <img src="./docs/images/ScreenShot2.png" style="border-radius: 6px; overflow: hidden;" alt="Eclaw ScreenShot"  />
 </p>
 
 <br />
