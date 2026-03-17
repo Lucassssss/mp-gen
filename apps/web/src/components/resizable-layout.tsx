@@ -356,8 +356,7 @@ export function ResizableLayout({
                 className="flex flex-col overflow-hidden"
                 style={{ 
                   minWidth: minChatWidth,
-                  maxWidth: 600,
-                  width: 600,
+                  maxWidth: maxChatWidth,
                 }}
               >
                 <ChatPanel 
