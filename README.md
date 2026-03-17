@@ -20,8 +20,8 @@
 
 <br />
 
-<p align="center">
-  <img src="./docs/images/ScreenShot2.png" style="border-radius: 6px; overflow: hidden;" alt="Eclaw ScreenShot"  />
+<p align="center" style="border-radius: 6px;box-shadow: 0px 3px 8px 4px #00000033;">
+  <img src="./docs/images/ScreenShot2.png" alt="Eclaw ScreenShot"  />
 </p>
 
 <br />
@@ -252,7 +252,3 @@ ai-assistant/
 ## 📄 许可证
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
-
-***
-
-<p align="center">Made with ❤️ by You</p>
