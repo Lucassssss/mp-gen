@@ -2,6 +2,8 @@ import { Router } from "express";
 import { generateText } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
 import { runChat } from "../services/llm.js";
+import { tools } from "../tools/index.js";
+import { initTaroProjectTool, editPageCodeTool } from "../tools/mini-program.js";
 import {
   getConversation,
   getConversations,
@@ -16,6 +18,39 @@ import {
 } from "../services/conversation.js";
 
 const router = Router();
+
+router.get("/debug/tools", (req, res) => {
+  res.json({
+    tools: Object.keys(tools),
+    hasInitTaro: 'initTaroProject' in tools,
+    hasEditPageCode: 'editPageCode' in tools,
+  });
+});
+
+router.post("/debug/test-taro", async (req, res) => {
+  try {
+    const testData = {
+      id: "test-project",
+      name: "测试项目",
+      description: "测试用项目",
+      pages: [
+        { name: "pages/index/index", title: "首页" },
+        { name: "pages/about/about", title: "关于" }
+      ],
+      config: {
+        window: { navigationBarTitleText: "测试" }
+      }
+    };
+    
+    console.log('[Debug] Testing initTaroProject with data:', testData);
+    const result = await (initTaroProjectTool as any).execute(testData);
+    console.log('[Debug] Result:', JSON.stringify(result).substring(0, 500));
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('[Debug] Error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
 
 router.get("/health", (req, res) => {
   res.json({ status: "ok" });

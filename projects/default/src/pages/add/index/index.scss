@@ -1,0 +1,333 @@
+.add-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  padding: 20px;
+}
+
+/* 头部 */
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+  text-align: center;
+}
+
+.title {
+  display: block;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* 表单区域 */
+.form {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.form-group {
+  margin-bottom: 28px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.form-label.required::after {
+  content: '*';
+  color: #ff3b30;
+  margin-left: 4px;
+}
+
+.form-input {
+  width: 100%;
+  background: #f8f9fa;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  border-color: #667eea;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+  width: 100%;
+  background: #f8f9fa;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  color: #333;
+  min-height: 100px;
+  transition: all 0.2s;
+}
+
+.form-textarea:focus {
+  border-color: #667eea;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-hint {
+  display: block;
+  font-size: 12px;
+  color: #8a94a6;
+  margin-top: 6px;
+  text-align: right;
+}
+
+/* 优先级选项 */
+.priority-options {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.priority-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.priority-option.active {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.priority-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.priority-label {
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+/* 日期选项 */
+.date-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.date-option {
+  padding: 10px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e1e5e9;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.date-option.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: #fff;
+  font-weight: 500;
+}
+
+.custom-date-picker {
+  margin-top: 16px;
+}
+
+.date-picker-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.date-picker-btn:active {
+  background: #eef1f4;
+}
+
+.date-picker-text {
+  font-size: 16px;
+  color: #333;
+}
+
+.date-picker-icon {
+  font-size: 20px;
+}
+
+/* 截止日期预览 */
+.due-date-preview {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 12px;
+}
+
+.preview-label {
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.preview-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+/* 统计信息预览 */
+.stats-preview {
+  display: flex;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #f8f9fa 0%, #eef1f4 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.stat-item {
+  text-align: center;
+  flex: 1;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #8a94a6;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.action-btn {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background: #f8f9fa;
+  color: #8a94a6;
+}
+
+.cancel-btn:active {
+  background: #eef1f4;
+}
+
+.reset-btn {
+  background: linear-gradient(135deg, #ff9500 0%, #ffcc00 100%);
+  color: #fff;
+}
+
+.reset-btn:active {
+  transform: scale(0.98);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #4cd964 0%, #5ac8fa 100%);
+  color: #fff;
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}
+
+/* 底部提示 */
+.footer {
+  text-align: center;
+  padding: 16px;
+}
+
+.footer-text {
+  font-size: 12px;
+  color: #8a94a6;
+  line-height: 1.5;
+}
+
+/* 响应式调整 */
+@media (max-width: 375px) {
+  .add-container {
+    padding: 16px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .priority-options {
+    flex-direction: column;
+  }
+  
+  .date-options {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .date-option {
+    text-align: center;
+  }
+  
+  .stats-preview {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

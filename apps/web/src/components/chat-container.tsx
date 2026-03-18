@@ -208,6 +208,7 @@ export function ChatContainer() {
                     },
                   };
                   useArtifactStore.getState().addArtifact(artifactData);
+                  
                 } else if (parsed.type === "step") {
                   console.log(`[${parsed.source}] Step: ${parsed.step}`);
                 }
@@ -420,6 +421,10 @@ export function ChatContainer() {
                       };
                       
                       useArtifactStore.getState().addArtifact(artifactData);
+                      
+                      if (outputData.artifactType === 'mini-program' || outputData.artifactType === 'h5' || outputData.artifactType === 'web' || outputData.artifactType === 'taro-project') {
+                      }
+                      
                       artifactProcessed = true;
                     }
                   } catch (e) {

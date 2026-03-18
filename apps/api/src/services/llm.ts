@@ -3,6 +3,7 @@ import { createMinimax } from 'vercel-minimax-ai-provider';
 import { ModelMessage, stepCountIs, streamText, ToolLoopAgent, ToolSet } from 'ai6';
 import { tools } from '../tools/index.js';
 import { theStartupFoundersLastStandPrompt } from '../prompts/index.js';
+import { setToolSessionId, clearToolSessionId } from '../tools/mini-program.js';
 import "dotenv/config";
 import Model from './model.js';
 import Agent from './agent.js';
@@ -33,9 +34,15 @@ export const runChat = async (
   let result: any = null;
   let assistantContent = "";
   
+  const systemPromptWithSession = `${theStartupFoundersLastStandPrompt}
+
+## 当前会话信息
+当前会话ID: ${sessionId}
+`;
+  
   messages = [{
     role: "system",
-    content: theStartupFoundersLastStandPrompt,
+    content: systemPromptWithSession,
   }, ...messages];
 
   if(mode === "auto") {
@@ -45,7 +52,7 @@ export const runChat = async (
     });
   } else if(mode === "agent") {
     result = await streamText({
-      system: theStartupFoundersLastStandPrompt,
+      system: systemPromptWithSession,
       model: Model.create(modelName),
       messages: messages,
       tools: tools,
@@ -70,6 +77,9 @@ export const runChat = async (
         break;
       case 'tool-call': {
         const inputStr = typeof part.input === 'object' ? JSON.stringify(part.input) : String(part.input || '');
+        if (part.toolName === 'initTaroProject' || part.toolName === 'editPageCode') {
+          setToolSessionId(sessionId);
+        }
         res.write(`data: ${JSON.stringify({ 
           type: "tool_call", 
           id: part.toolCallId,
@@ -85,11 +95,26 @@ export const runChat = async (
           part.toolName === 'createCodeArtifact' || 
           part.toolName === 'createDocumentArtifact' || 
           part.toolName === 'createDataArtifact' || 
-          part.toolName === 'createTableArtifact'
+          part.toolName === 'createTableArtifact' ||
+          part.toolName === 'createMiniProgramArtifact' ||
+          part.toolName === 'initTaroProject' ||
+          part.toolName === 'editPageCode'
         )) {
           try {
             const outputData = typeof part.output === 'object' ? part.output : JSON.parse(String(part.output));
             if (outputData && outputData.type === 'artifact') {
+              const additionalFields: Record<string, unknown> = {};
+              
+              if (outputData.files) {
+                additionalFields.files = outputData.files;
+              }
+              if (outputData.projectName) {
+                additionalFields.projectName = outputData.projectName;
+              }
+              if (outputData.metadata) {
+                additionalFields.metadata = outputData.metadata;
+              }
+              
               res.write(`data: ${JSON.stringify({ 
                 type: "artifact", 
                 artifactType: outputData.artifactType,
@@ -102,7 +127,8 @@ export const runChat = async (
                 columns: outputData.columns,
                 rows: outputData.rows,
                 status: outputData.status || 'complete',
-                progress: outputData.progress || 1
+                progress: outputData.progress || 1,
+                ...additionalFields
               })}\n\n`);
               break;
             }

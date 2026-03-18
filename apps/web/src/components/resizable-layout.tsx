@@ -4,6 +4,7 @@ import * as React from "react";
 import { ConversationsSidebar } from "@/components/conversations-sidebar";
 import { ChatPanel } from "@/components/chat-panel";
 import { ArtifactPanel } from "@/components/artifact-panel";
+import { PhonePreviewPanel } from "@/components/phone-preview-panel";
 import { WebhooksModal } from "@/components/modals/webhooks-modal";
 import { SystemModal } from "@/components/modals/system-modal";
 import { AgentsModal } from "@/components/modals/agents-modal";
@@ -297,7 +298,7 @@ export function ResizableLayout({
       {isArtifactFloating && (
         <aside className="fixed right-0 top-0 bottom-0 z-50 bg-background border-l border-border shadow-xl p-3" style={{ width: artifactWidth, maxWidth: '90vw' }}>
           <div className="h-full bg-background rounded-lg shadow-sm overflow-hidden">
-            <ArtifactPanel />
+            <PhonePreviewPanel />
           </div>
         </aside>
       )}
@@ -392,7 +393,7 @@ export function ResizableLayout({
             style={{ width: artifactWidth }}
           >
             <div className="bg-background h-full rounded-lg shadow-sm overflow-hidden">
-              <ArtifactPanel />
+              <PhonePreviewPanel />
             </div>
           </aside>
         )}
