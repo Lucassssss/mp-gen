@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import router from "./routes/index.js";
-import { taroRouter } from "./services/taro-preview.js";
+import { taroPreviewRouter } from "./services/taro-preview.js";
 import killPort from 'kill-port';
 
 const app = express();
@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 });
 
 app.use(router);
-app.use('/api/taro', taroRouter);
+app.use('/api/taro', taroPreviewRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

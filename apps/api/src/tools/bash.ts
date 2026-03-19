@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool } from "ai6";
 import { z } from "zod";
 import { Bash } from "just-bash";
 import { ReadWriteFs } from "just-bash";

@@ -1,16 +1,30 @@
-import { generateObject, generateText, CoreMessage } from "ai";
+import {  generateText } from "ai6";
 import { z } from "zod";
 import db from "./database.js";
 import type { Conversation, Message } from "../types/index.js";
+import { promises as fs } from "fs";
+import path from "path";
+import Model from "./model.js";
+import { ModelMessage } from "ai6";
 
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const PROJECTS_DIR = path.join(process.cwd(), "..", "..", "projects");
+
+async function ensureProjectDir(sessionId: string): Promise<string> {
+  const projectPath = path.join(PROJECTS_DIR, sessionId);
+  await fs.mkdir(projectPath, { recursive: true });
+  return projectPath;
 }
 
-export function createConversation(title?: string, model?: string, mode?: string): Conversation {
+function generateId(): string {
+  return `c-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export async function createConversation(title?: string, model?: string, mode?: string): Promise<Conversation> {
   const id = generateId();
   const now = Date.now();
   const defaultTitle = title || "New Conversation";
+
+  await ensureProjectDir(id);
 
   db.prepare(`
     INSERT INTO conversations (id, title, model, mode, created_at, updated_at)
@@ -113,27 +127,19 @@ export function clearMessages(conversationId: string): void {
 
 export async function generateTitle(userMessage: string): Promise<string> {
   const { text } = await generateText({
-    model: createTitleModel(),
+    model: Model.create("deepseek/deepseek-chat"),
     messages: [
       {
         role: "user",
-        content: `Generate a short title (max 30 characters) for this conversation based on the first message. Just return the title, nothing else.\n\nFirst message: ${userMessage}`
+        content: `Generate a short title (max 20 characters) for this conversation based on the first message. Just return the title, nothing else.\n\nFirst message: ${userMessage}`
       }
     ],
-    maxTokens: 50,
   });
 
   return text.trim().slice(0, 50);
 }
 
-function createTitleModel() {
-  return {
-    provider: "deepseek",
-    id: "deepseek-chat",
-  };
-}
-
-export function convertToUIMessages(messages: Message[]): CoreMessage[] {
+export function convertToUIMessages(messages: Message[]): ModelMessage[] {
   return messages.map((msg) => ({
     role: msg.role as "user" | "assistant" | "system",
     content: msg.content,

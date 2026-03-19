@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
 import { runChat } from "../services/llm.js";
 import { tools } from "../tools/index.js";
-import { initTaroProjectTool, editPageCodeTool } from "../tools/mini-program.js";
+import { initTaroProjectTool, editPageCodeTool, setToolSessionId, clearToolSessionId } from "../tools/mini-program.js";
 import {
   getConversation,
   getConversations,
@@ -75,7 +75,7 @@ router.get("/conversations/:id", (req, res) => {
 
 router.post("/conversations", async (req, res) => {
   const { title, model, mode } = req.body;
-  const conversation = createConversation(title, model, mode);
+  const conversation = await createConversation(title, model, mode);
   res.status(201).json({ conversation });
 });
 
@@ -116,7 +116,7 @@ router.post("/api/chat", async (req, res) => {
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
-      const newConversation = createConversation(undefined, modelName, mode);
+      const newConversation = await createConversation(undefined, modelName, mode);
       currentConversationId = newConversation.id;
       res.write(`data: ${JSON.stringify({ type: "conversation_created", id: newConversation.id })}\n\n`);
     }
@@ -125,6 +125,8 @@ router.post("/api/chat", async (req, res) => {
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
     }
+
+    setToolSessionId(currentConversationId);
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "messages array is required" });
@@ -182,6 +184,7 @@ router.post("/api/chat", async (req, res) => {
         res.write(`data: ${JSON.stringify({ error: String(error) })}\n\n`);
       }
     } finally {
+      clearToolSessionId();
       if (!res.destroyed) res.end();
     }
   } catch (error) {

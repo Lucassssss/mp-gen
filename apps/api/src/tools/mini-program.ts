@@ -1,7 +1,8 @@
-import { tool } from 'ai';
+import { tool } from "ai6";
 import { z } from 'zod';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { taroPreviewService } from '../services/taro-preview.js';
 
 const PROJECTS_DIR = path.join(process.cwd(), '..', '..', 'projects');
 
@@ -284,14 +285,14 @@ export const initTaroProjectTool = tool({
   execute: async (data) => {
     const sessionId = data.sessionId;
     console.log('[initTaroProject] Starting...', { sessionId, name: data.name, pages: data.pages?.length });
-    
+
     await ensureProjectsDir();
     const projectPath = path.join(PROJECTS_DIR, sessionId);
     console.log('[initTaroProject] Project path:', projectPath);
-    
+
     const templatePath = path.join(process.cwd(), '..', '..', 'lib', 'app-react');
     console.log('[initTaroProject] Template path:', templatePath);
-    
+
     await fs.cp(templatePath, projectPath, { recursive: true });
     console.log('[initTaroProject] Template copied');
 
@@ -300,6 +301,10 @@ export const initTaroProjectTool = tool({
     packageJson.name = sessionId;
     await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
     console.log('[initTaroProject] package.json updated');
+
+    console.log(`[initTaroProject] Project created, starting preview for ${sessionId}...`);
+    const previewResult = await taroPreviewService.startPreview(sessionId);
+    console.log(`[initTaroProject] Preview result:`, previewResult);
 
     return {
       type: 'artifact',
@@ -316,6 +321,8 @@ export const initTaroProjectTool = tool({
         platforms: ['h5', 'weapp'],
         action: 'init',
         projectPath,
+        previewUrl: previewResult.previewUrl,
+        previewStatus: previewResult.status,
       },
     };
   },
@@ -338,12 +345,12 @@ export const editPageCodeTool = tool({
       normalizedPath = pagePath.slice(0, -6);
     }
     const pageName = normalizedPath.split('/').pop() || 'index';
-    
+
     const files: Array<{ path: string; content: string }> = [];
-    
+
     await ensureProjectsDir();
     const projectPath = path.join(PROJECTS_DIR, projectId);
-    
+
     const tsxPath = path.join(projectPath, 'src', normalizedPath, 'index.tsx');
     await fs.mkdir(path.dirname(tsxPath), { recursive: true });
     await fs.writeFile(tsxPath, code, 'utf-8');
@@ -361,6 +368,10 @@ export const editPageCodeTool = tool({
       });
     }
 
+    console.log(`[editPageCode] Code saved for ${projectId}-${pagePath}, triggering preview refresh...`);
+    const previewResult = await taroPreviewService.refreshPreview(projectId);
+    console.log(`[editPageCode] Preview refresh result:`, previewResult);
+
     return {
       type: 'artifact',
       artifactType: 'taro-edit',
@@ -375,6 +386,8 @@ export const editPageCodeTool = tool({
         action: 'edit',
         pageName,
         projectPath,
+        previewUrl: previewResult.previewUrl,
+        previewStatus: previewResult.status,
       },
     };
   },

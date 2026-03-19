@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { tool } from "ai6";
 import { z } from "zod";
 import { Stagehand } from "@browserbasehq/stagehand";
 import "dotenv/config";

@@ -1,4 +1,4 @@
-import { tool, Tool } from "ai";
+import { tool, Tool } from "ai6";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 

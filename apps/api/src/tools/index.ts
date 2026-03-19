@@ -1,4 +1,4 @@
-import { tool, ToolSet } from "ai";
+import { tool, ToolSet } from "ai6";
 import { z } from "zod";
 import type { ToolDefinition } from "../types/index.js";
 import { stagehandTool, navigateTool, extractTool, observeTool } from "./stagehand.js";
@@ -6,6 +6,7 @@ import { bash } from "./bash.js";
 import { artifactTools } from "./artifact.js";
 import { miniProgramArtifactTools } from "./mini-program.js";
 import { sendEmailTool, checkEmailConfigTool } from "./mail.js";
+import { codeTools } from "./code/index.js";
 
 const calculatorTool = tool({
   description: "计算数学表达式的值",
@@ -43,17 +44,9 @@ const weatherTool = tool({
 
 export const tools: ToolSet = {
   getCurrentTimeTool,
-  // weatherTool,
-  // calculatorTool,
   stagehandTool,
-  // navigateTool,
-  // extractTool,
-  // observeTool,
-  // bash: bash as any,
-  // ...artifactTools,
   ...miniProgramArtifactTools,
-  // sendEmailTool,
-  // checkEmailConfigTool,
+  ...codeTools,
 };
 
 // export function getToolDefinitions(): ToolDefinition[] {
