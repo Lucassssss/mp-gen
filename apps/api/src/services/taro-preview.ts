@@ -35,7 +35,7 @@ async function ensureTempDir(sessionId?: string) {
 
 async function installDependencies(projectPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const npm = spawn('npm', ['install'], {
+    const npm = spawn('pnpm', ['install'], {
       cwd: projectPath,
       shell: true,
       env: { ...process.env, FORCE_COLOR: '0' },
@@ -47,9 +47,9 @@ async function installDependencies(projectPath: string): Promise<void> {
 
     npm.on('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`npm install failed`));
+      else reject(new Error(`pnpm install failed: ${output}`));
     });
-    npm.on('error', reject);
+    npm.on('error', (err) => reject(new Error(`pnpm install error: ${err.message}`)));
   });
 }
 
@@ -59,7 +59,8 @@ function startTaroDevServer(
   onReady: () => void,
   onError: (error: Error) => void
 ): ReturnType<typeof spawn> {
-  const devProcess = spawn('npx', ['taro', 'dev', '--type', 'h5', '--port', String(port)], {
+  console.log('[startTaroDevServer] Spawning taro dev server on port:', port);
+  const devProcess = spawn('pnpm', ['run', 'dev:h5', '--port', String(port)], {
     cwd: projectPath,
     shell: true,
     env: { ...process.env, FORCE_COLOR: '0' },
@@ -68,27 +69,47 @@ function startTaroDevServer(
   let buffer = '';
   let ready = false;
 
+  const checkReady = (text: string) => {
+    if (ready) return;
+    
+    if (text.includes('Local:') && text.includes('http://localhost:')) {
+      ready = true;
+      console.log('[startTaroDevServer] Server started, URL detected');
+      onReady();
+      return;
+    }
+    
+    if (text.includes('Compiled') || text.includes('webpack compiled')) {
+      ready = true;
+      console.log('[startTaroDevServer] Compiled detected');
+      onReady();
+    }
+  };
+
   devProcess.stdout?.on('data', (data) => {
     const text = data.toString();
     buffer += text;
-    if (!ready && (text.includes('Compiled') || text.includes('webpack compiled'))) {
-      ready = true;
-      onReady();
-    }
+    console.log('[taro stdout]:', text.slice(0, 200));
+    checkReady(text);
   });
 
   devProcess.stderr?.on('data', (data) => {
     const text = data.toString();
-    if (!ready && (text.includes('Compiled') || text.includes('webpack compiled'))) {
-      ready = true;
-      onReady();
-    }
+    console.log('[taro stderr]:', text.slice(0, 200));
+    checkReady(text);
   });
 
-  devProcess.on('error', onError);
+  devProcess.on('error', (err) => {
+    console.error('[startTaroDevServer] Process error:', err);
+    onError(err);
+  });
 
   setTimeout(() => {
-    if (!ready) { ready = true; onReady(); }
+    if (!ready) { 
+      console.log('[startTaroDevServer] Timeout, marking as ready');
+      ready = true; 
+      onReady(); 
+    }
   }, 45000);
 
   return devProcess;
@@ -227,6 +248,119 @@ taroRouter.post('/stop/:projectId', (req, res) => {
   res.json({ success: true, message: 'Project stopped' });
 });
 
+taroRouter.post('/restart/:sessionId', async (req, res) => {
+  const { sessionId } = req.params;
+  const projectPath = path.join(PROJECTS_DIR, sessionId);
+  
+  console.log('[restart] ========================');
+  console.log('[restart] Restarting preview for session:', sessionId);
+  console.log('[restart] Project path:', projectPath);
+  
+  if (!existsSync(projectPath)) {
+    console.log('[restart] Project directory not found!');
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  console.log('[restart] Project directory exists');
+  
+  const existingProject = projects.get(sessionId);
+  if (existingProject) {
+    console.log('[restart] Existing project found, status:', existingProject.status);
+    if (existingProject.process) {
+      console.log('[restart] Killing existing process...');
+      existingProject.process.kill();
+      existingProject.status = 'stopped';
+    }
+  } else {
+    console.log('[restart] No existing project in memory');
+  }
+  
+  const port = 10000 + Math.floor(Math.random() * 9000);
+  console.log('[restart] Using port:', port);
+  
+  const project: ProjectInstance = {
+    id: sessionId,
+    name: sessionId,
+    projectPath: projectPath,
+    previewUrl: `http://localhost:${port}`,
+    port,
+    createdAt: new Date(),
+    status: 'compiling',
+  };
+  
+  projects.set(sessionId, project);
+  console.log('[restart] Project saved to memory');
+  
+  const nodeModulesPath = path.join(projectPath, 'node_modules');
+  if (!existsSync(nodeModulesPath)) {
+    console.log('[restart] node_modules not found, installing dependencies...');
+    try {
+      await installDependencies(projectPath);
+      console.log('[restart] Dependencies installed successfully');
+    } catch (installError) {
+      console.error('[restart] Failed to install dependencies:', installError);
+      const p = projects.get(sessionId);
+      if (p) { p.status = 'error'; }
+      return res.json({
+        exists: true,
+        projectId: sessionId,
+        status: 'error',
+        error: 'Failed to install dependencies'
+      });
+    }
+  } else {
+    console.log('[restart] node_modules exists, skipping install');
+  }
+  
+  console.log('[restart] Starting Taro dev server...');
+  startTaroDevServer(
+    projectPath,
+    port,
+    () => {
+      console.log('[restart] onReady callback triggered');
+      const p = projects.get(sessionId);
+      if (p) { p.status = 'ready'; }
+    },
+    (error) => {
+      const p = projects.get(sessionId);
+      if (p) { p.status = 'error'; }
+      console.error('[restart] Taro dev server error:', error);
+    }
+  );
+
+  console.log('[restart] Waiting for server to be ready...');
+  for (let i = 0; i < 90; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const p = projects.get(sessionId);
+    console.log('[restart] Check', i, '- status:', p?.status);
+    if (p?.status === 'ready') {
+      console.log('[restart] Server is ready! URL:', p.previewUrl);
+      return res.json({
+        exists: true,
+        projectId: p.id,
+        previewUrl: p.previewUrl,
+        status: p.status,
+        message: 'Preview restarted'
+      });
+    }
+    if (p?.status === 'error') {
+      console.log('[restart] Server error!');
+      return res.json({
+        exists: true,
+        projectId: p.id,
+        status: p.status,
+        error: 'Failed to start preview'
+      });
+    }
+  }
+
+  res.json({
+    exists: true,
+    projectId: sessionId,
+    status: 'compiling',
+    message: 'Preview restarting...'
+  });
+});
+
 taroRouter.get('/list', (req, res) => {
   const projectList = Array.from(projects.values()).map(p => ({
     id: p.id,
@@ -313,21 +447,30 @@ taroRouter.post('/init-session', async (req, res) => {
     };
     
     projects.set(sessionId, project);
+    console.log('[init-session] Project saved to memory');
     
-    try {
-      await installDependencies(projectPath);
-    } catch (installError) {
-      console.error('Failed to install dependencies:', installError);
-      const p = projects.get(sessionId);
-      if (p) { p.status = 'error'; }
-      return res.json({
-        exists: true,
-        projectId: sessionId,
-        status: 'error',
-        error: 'Failed to install dependencies'
-      });
+    const nodeModulesPath = path.join(projectPath, 'node_modules');
+    if (!existsSync(nodeModulesPath)) {
+      console.log('[init-session] Installing dependencies...');
+      try {
+        await installDependencies(projectPath);
+        console.log('[init-session] Dependencies installed');
+      } catch (installError) {
+        console.error('[init-session] Failed to install dependencies:', installError);
+        const p = projects.get(sessionId);
+        if (p) { p.status = 'error'; }
+        return res.json({
+          exists: true,
+          projectId: sessionId,
+          status: 'error',
+          error: 'Failed to install dependencies'
+        });
+      }
+    } else {
+      console.log('[init-session] Dependencies already installed, skipping');
     }
     
+    console.log('[init-session] Starting Taro dev server...');
     startTaroDevServer(
       projectPath,
       port,

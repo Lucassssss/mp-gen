@@ -66,7 +66,7 @@ export function ResizableLayout({
   const [artifactWidth, setArtifactWidth] = React.useState(defaultArtifactWidth);
   const [chatWidth, setChatWidth] = React.useState(defaultChatWidth);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
-  const [isArtifactCollapsed, setIsArtifactCollapsed] = React.useState(true);
+  const [isArtifactCollapsed, setIsArtifactCollapsed] = React.useState(false);
   
   const [isSidebarFloating, setIsSidebarFloating] = React.useState(false);
   const [isArtifactFloating, setIsArtifactFloating] = React.useState(false);
@@ -140,24 +140,14 @@ export function ResizableLayout({
   }, []);
 
   const getLayoutState = React.useCallback(() => {
-    // 聊天区域固定需要600px
-    const neededChatWidth = 600;
-    const remainingWidth = containerWidth - neededChatWidth;
-    
-    if (remainingWidth < 0) {
-      return { showSidebar: false, showArtifact: false, floating: false };
-    }
-    
-    const hasRoomForSidebar = remainingWidth >= sidebarWidth;
-    const remainingAfterSidebar = remainingWidth - (hasRoomForSidebar ? sidebarWidth : 0);
-    const hasRoomForArtifact = remainingAfterSidebar >= artifactWidth;
+    const hasRoomForSidebar = containerWidth >= sidebarWidth;
     
     return {
       showSidebar: hasRoomForSidebar,
-      showArtifact: hasRoomForArtifact,
+      showArtifact: true,
       floating: false
     };
-  }, [containerWidth, sidebarWidth, artifactWidth]);
+  }, [containerWidth, sidebarWidth]);
 
   const layoutState = getLayoutState();
   
@@ -166,55 +156,33 @@ export function ResizableLayout({
   const effectiveShowArtifact = !isArtifactCollapsed && (layoutState.showArtifact || isArtifactFloating);
 
   const canShowSidebar = containerWidth >= 600 + sidebarWidth;
-  const canShowArtifact = containerWidth >= 600 + artifactWidth;
+  const canShowArtifact = containerWidth >= 600;
   const needsFloatingSidebar = containerWidth < 600 + sidebarWidth && containerWidth >= 600;
-  const needsFloatingArtifact = containerWidth < 600 + artifactWidth && containerWidth >= 600;
+  const needsFloatingArtifact = false;
 
   const handleToggleSidebar = () => {
-    // 如果当前没有显示（无论是固定还是浮动），就显示
     if (isSidebarCollapsed || (!effectiveShowSidebar && !isSidebarFloating)) {
-      // 用户想要显示 sidebar
-      // 计算需要的总宽度：聊天区域(最大600) + sidebar + artifact(如果显示)
-      const neededChatWidth = 600; // 聊天区域固定需要600
-      const neededArtifactWidth = (!isArtifactCollapsed && !isArtifactFloating) ? artifactWidth : 0;
-      const totalNeeded = neededChatWidth + sidebarWidth + neededArtifactWidth;
+      const neededChatWidth = 600;
+      const totalNeeded = neededChatWidth + sidebarWidth;
       
       if (containerWidth >= totalNeeded) {
-        // 空间够，使用固定模式
         setIsSidebarCollapsed(false);
         setIsSidebarFloating(false);
       } else {
-        // 空间不够，使用浮动模式
         setIsSidebarFloating(true);
         setIsSidebarCollapsed(false);
       }
     } else {
-      // 用户想要隐藏 sidebar
       setIsSidebarFloating(false);
       setIsSidebarCollapsed(true);
     }
   };
 
   const handleToggleArtifact = () => {
-    // 如果当前没有显示（无论是固定还是浮动），就显示
     if (isArtifactCollapsed || (!effectiveShowArtifact && !isArtifactFloating)) {
-      // 用户想要显示 artifact
-      // 计算需要的总宽度：聊天区域(最大600) + sidebar(如果显示) + artifact
-      const neededChatWidth = 600; // 聊天区域固定需要600
-      const neededSidebarWidth = (!isSidebarCollapsed && !isSidebarFloating) ? sidebarWidth : 0;
-      const totalNeeded = neededChatWidth + neededSidebarWidth + artifactWidth;
-      
-      if (containerWidth >= totalNeeded) {
-        // 空间够，使用固定模式
-        setIsArtifactCollapsed(false);
-        setIsArtifactFloating(false);
-      } else {
-        // 空间不够，使用浮动模式
-        setIsArtifactFloating(true);
-        setIsArtifactCollapsed(false);
-      }
+      setIsArtifactCollapsed(false);
+      setIsArtifactFloating(false);
     } else {
-      // 用户想要隐藏 artifact
       setIsArtifactFloating(false);
       setIsArtifactCollapsed(true);
     }

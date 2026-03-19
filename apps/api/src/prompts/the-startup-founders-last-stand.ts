@@ -54,7 +54,7 @@ export const theStartupFoundersLastStandPrompt = `
 输入参数：
 - sessionId: 会话ID（由系统提供，必须传递）
 - projectId: 项目ID（会话ID）
-- pagePath: 页面路径（如 "pages/index/index"）
+- pagePath: 页面路径，格式为 "pages/页面名"，如 "pages/index"（对应 src/pages/index/index.tsx）
 - code: 完整的 TSX 代码
 - style: 可选的 SCSS 样式代码
 

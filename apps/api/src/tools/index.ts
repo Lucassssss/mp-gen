@@ -43,17 +43,17 @@ const weatherTool = tool({
 
 export const tools: ToolSet = {
   getCurrentTimeTool,
-  weatherTool,
-  calculatorTool,
+  // weatherTool,
+  // calculatorTool,
   stagehandTool,
-  navigateTool,
-  extractTool,
-  observeTool,
-  bash: bash as any,
-  ...artifactTools,
+  // navigateTool,
+  // extractTool,
+  // observeTool,
+  // bash: bash as any,
+  // ...artifactTools,
   ...miniProgramArtifactTools,
-  sendEmailTool,
-  checkEmailConfigTool,
+  // sendEmailTool,
+  // checkEmailConfigTool,
 };
 
 // export function getToolDefinitions(): ToolDefinition[] {

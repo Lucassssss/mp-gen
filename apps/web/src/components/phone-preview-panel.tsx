@@ -25,6 +25,13 @@ async function initSessionProject(sessionId: string): Promise<{ exists: boolean;
   return response.json();
 }
 
+async function restartSessionProject(sessionId: string): Promise<{ exists: boolean; projectId?: string; previewUrl?: string; status?: string; message?: string }> {
+  const response = await fetch(`${API_BASE}/api/taro/restart/${sessionId}`, {
+    method: 'POST',
+  });
+  return response.json();
+}
+
 async function checkTaroStatus(projectId: string): Promise<{ status: string; previewUrl?: string }> {
   const response = await fetch(`${API_BASE}/api/taro/status/${projectId}`);
   return response.json();

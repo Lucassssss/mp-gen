@@ -423,6 +423,13 @@ export function ChatContainer() {
                       useArtifactStore.getState().addArtifact(artifactData);
                       
                       if (outputData.artifactType === 'mini-program' || outputData.artifactType === 'h5' || outputData.artifactType === 'web' || outputData.artifactType === 'taro-project') {
+                        const projectSessionId = outputData.sessionId || outputData.id || currentConversation?.id;
+                        if (projectSessionId) {
+                          console.log('[Preview] Restarting preview for:', projectSessionId);
+                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/taro/restart/${projectSessionId}`, {
+                            method: 'POST',
+                          }).catch(err => console.error('[Preview] Restart failed:', err));
+                        }
                       }
                       
                       artifactProcessed = true;

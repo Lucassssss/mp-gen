@@ -2,7 +2,7 @@ import { deepseek, DeepSeekLanguageModelOptions } from '@ai-sdk/deepseek';
 import { createMinimax } from 'vercel-minimax-ai-provider';
 import { ModelMessage, stepCountIs, streamText, ToolLoopAgent, ToolSet } from 'ai6';
 import { tools } from '../tools/index.js';
-import { theStartupFoundersLastStandPrompt } from '../prompts/index.js';
+import { prompts } from '../prompts/index.js';
 import { setToolSessionId, clearToolSessionId } from '../tools/mini-program.js';
 import "dotenv/config";
 import Model from './model.js';
@@ -34,7 +34,7 @@ export const runChat = async (
   let result: any = null;
   let assistantContent = "";
   
-  const systemPromptWithSession = `${theStartupFoundersLastStandPrompt}
+  const systemPromptWithSession = `${prompts}
 
 ## 当前会话信息
 当前会话ID: ${sessionId}

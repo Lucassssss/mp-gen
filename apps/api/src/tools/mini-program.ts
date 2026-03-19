@@ -285,31 +285,29 @@ export const initTaroProjectTool = tool({
     const sessionId = data.sessionId;
     console.log('[initTaroProject] Starting...', { sessionId, name: data.name, pages: data.pages?.length });
     
-    const { files, projectName } = generateBaseTaroProject(data);
-    console.log('[initTaroProject] Generated files:', files.length, 'projectName:', projectName);
-    
     await ensureProjectsDir();
-    const projectPath = path.join(PROJECTS_DIR, projectName);
+    const projectPath = path.join(PROJECTS_DIR, sessionId);
     console.log('[initTaroProject] Project path:', projectPath);
     
-    await fs.mkdir(projectPath, { recursive: true });
-    console.log('[initTaroProject] Directory created');
+    const templatePath = path.join(process.cwd(), '..', '..', 'lib', 'app-react');
+    console.log('[initTaroProject] Template path:', templatePath);
     
-    for (const file of files) {
-      const relativePath = file.path.replace(/^[^/]+\//, '');
-      const filePath = path.join(projectPath, relativePath);
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, file.content, 'utf-8');
-    }
-    console.log('[initTaroProject] All files written');
+    await fs.cp(templatePath, projectPath, { recursive: true });
+    console.log('[initTaroProject] Template copied');
+
+    const packageJsonPath = path.join(projectPath, 'package.json');
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+    packageJson.name = sessionId;
+    await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    console.log('[initTaroProject] package.json updated');
 
     return {
       type: 'artifact',
       artifactType: 'taro-project',
       id: sessionId || 'default',
       title: data.name,
-      projectName,
-      files,
+      projectName: sessionId,
+      files: [],
       status: 'complete',
       progress: 1,
       metadata: {
@@ -335,26 +333,30 @@ export const editPageCodeTool = tool({
   description: '编辑指定页面的代码。用于修改页面逻辑、组件和样式。只更新指定页面的代码，不影响其他页面。',
   inputSchema: PageEditSchema,
   execute: async ({ projectId, pagePath, code, style }) => {
-    const pageName = pagePath.split('/').pop() || 'index';
+    let normalizedPath = pagePath;
+    if (pagePath.endsWith('/index')) {
+      normalizedPath = pagePath.slice(0, -6);
+    }
+    const pageName = normalizedPath.split('/').pop() || 'index';
     
     const files: Array<{ path: string; content: string }> = [];
     
     await ensureProjectsDir();
     const projectPath = path.join(PROJECTS_DIR, projectId);
     
-    const tsxPath = path.join(projectPath, 'src', pagePath, 'index.tsx');
+    const tsxPath = path.join(projectPath, 'src', normalizedPath, 'index.tsx');
     await fs.mkdir(path.dirname(tsxPath), { recursive: true });
     await fs.writeFile(tsxPath, code, 'utf-8');
     files.push({
-      path: `src/${pagePath}/index.tsx`,
+      path: `src/${normalizedPath}/index.tsx`,
       content: code,
     });
 
     if (style) {
-      const scssPath = path.join(projectPath, 'src', pagePath, 'index.scss');
+      const scssPath = path.join(projectPath, 'src', normalizedPath, 'index.scss');
       await fs.writeFile(scssPath, style, 'utf-8');
       files.push({
-        path: `src/${pagePath}/index.scss`,
+        path: `src/${normalizedPath}/index.scss`,
         content: style,
       });
     }
