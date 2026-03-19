@@ -58,102 +58,132 @@ export const runChat = async (
       tools: tools,
       stopWhen: stepCountIs(100),
     });
-  } 
-  // else if(mode === "deep-agent") {
-  //   await streamDeepAgentUpdates({ messages: messages as any }, res);
-  //   onAssistantMessage?.("", true);
-  //   return;
-  // }
+  }
+
+  try {
+    let toolErrorCount = 0;
+    const MAX_TOOL_ERRORS = 10;
 
   for await (const part of result.fullStream) {
-    switch (part.type) {
-      case 'reasoning-delta':
-        res.write(`data: ${JSON.stringify({ type: "reasoning", content: part.text })}\n\n`);
-        break;
-      case 'text-delta':
-        assistantContent += part.text;
-        onAssistantMessage?.(assistantContent, false);
-        res.write(`data: ${JSON.stringify({ type: "text", content: part.text })}\n\n`);
-        break;
-      case 'tool-call': {
-        const inputStr = typeof part.input === 'object' ? JSON.stringify(part.input) : String(part.input || '');
-        if (part.toolName === 'initTaroProject' || part.toolName === 'editPageCode') {
-          setToolSessionId(sessionId);
-        }
-        res.write(`data: ${JSON.stringify({ 
-          type: "tool_call", 
-          id: part.toolCallId,
-          name: part.toolName,
-          input: inputStr
-        })}\n\n`);
-        break;
-      }
-      case 'tool-result': {
-        const outputStr = typeof part.output === 'object' ? JSON.stringify(part.output) : String(part.output || '');
-        
-        if (part.toolName && (
-          part.toolName === 'createCodeArtifact' || 
-          part.toolName === 'createDocumentArtifact' || 
-          part.toolName === 'createDataArtifact' || 
-          part.toolName === 'createTableArtifact' ||
-          part.toolName === 'createMiniProgramArtifact' ||
-          part.toolName === 'initTaroProject' ||
-          part.toolName === 'editPageCode'
-        )) {
-          try {
-            const outputData = typeof part.output === 'object' ? part.output : JSON.parse(String(part.output));
-            if (outputData && outputData.type === 'artifact') {
-              const additionalFields: Record<string, unknown> = {};
-              
-              if (outputData.files) {
-                additionalFields.files = outputData.files;
-              }
-              if (outputData.projectName) {
-                additionalFields.projectName = outputData.projectName;
-              }
-              if (outputData.metadata) {
-                additionalFields.metadata = outputData.metadata;
-              }
-              
-              res.write(`data: ${JSON.stringify({ 
-                type: "artifact", 
-                artifactType: outputData.artifactType,
-                id: outputData.id,
-                title: outputData.title,
-                content: outputData.code || outputData.content || JSON.stringify(outputData.data || outputData.rows || ''),
-                language: outputData.language,
-                format: outputData.format,
-                data: outputData.data,
-                columns: outputData.columns,
-                rows: outputData.rows,
-                status: outputData.status || 'complete',
-                progress: outputData.progress || 1,
-                ...additionalFields
-              })}\n\n`);
-              break;
-            }
-          } catch (e) {
-            console.error('Error parsing artifact output:', e);
+    try {
+      switch (part.type) {
+        case 'reasoning-delta':
+          res.write(`data: ${JSON.stringify({ type: "reasoning", content: part.text })}\n\n`);
+          break;
+        case 'text-delta':
+          assistantContent += part.text;
+          onAssistantMessage?.(assistantContent, false);
+          res.write(`data: ${JSON.stringify({ type: "text", content: part.text })}\n\n`);
+          break;
+        case 'tool-call': {
+          const inputStr = typeof part.input === 'object' ? JSON.stringify(part.input) : String(part.input || '');
+          if (part.toolName === 'initTaroProject' || part.toolName === 'editPageCode') {
+            setToolSessionId(sessionId);
           }
+          res.write(`data: ${JSON.stringify({ 
+            type: "tool_call", 
+            id: part.toolCallId,
+            name: part.toolName,
+            input: inputStr
+          })}\n\n`);
+          break;
         }
-        
-        res.write(`data: ${JSON.stringify({ 
-          type: "tool_result", 
-          toolName: part.toolName,
-          output: outputStr
-        })}\n\n`);
-        break;
+        case 'tool-result': {
+          const outputStr = typeof part.output === 'object' ? JSON.stringify(part.output) : String(part.output || '');
+          
+          if (part.toolName && (
+            part.toolName === 'createCodeArtifact' || 
+            part.toolName === 'createDocumentArtifact' || 
+            part.toolName === 'createDataArtifact' || 
+            part.toolName === 'createTableArtifact' ||
+            part.toolName === 'createMiniProgramArtifact' ||
+            part.toolName === 'initTaroProject' ||
+            part.toolName === 'editPageCode'
+          )) {
+            try {
+              const outputData = typeof part.output === 'object' ? part.output : JSON.parse(String(part.output));
+              if (outputData && outputData.type === 'artifact') {
+                const additionalFields: Record<string, unknown> = {};
+                
+                if (outputData.files) {
+                  additionalFields.files = outputData.files;
+                }
+                if (outputData.projectName) {
+                  additionalFields.projectName = outputData.projectName;
+                }
+                if (outputData.metadata) {
+                  additionalFields.metadata = outputData.metadata;
+                }
+                
+                res.write(`data: ${JSON.stringify({ 
+                  type: "artifact", 
+                  artifactType: outputData.artifactType,
+                  id: outputData.id,
+                  title: outputData.title,
+                  content: outputData.code || outputData.content || JSON.stringify(outputData.data || outputData.rows || ''),
+                  language: outputData.language,
+                  format: outputData.format,
+                  data: outputData.data,
+                  columns: outputData.columns,
+                  rows: outputData.rows,
+                  status: outputData.status || 'complete',
+                  progress: outputData.progress || 1,
+                  ...additionalFields
+                })}\n\n`);
+                break;
+              }
+            } catch (e) {
+              console.error('Error parsing artifact output:', e);
+            }
+          }
+          
+          res.write(`data: ${JSON.stringify({ 
+            type: "tool_result", 
+            toolName: part.toolName,
+            output: outputStr
+          })}\n\n`);
+          break;
+        }
+        case 'tool-error': {
+          toolErrorCount++;
+          if (toolErrorCount >= MAX_TOOL_ERRORS) {
+            res.write(`data: ${JSON.stringify({ 
+              type: "error", 
+              error: `工具调用错误次数过多 (${toolErrorCount}次)，已停止执行。可能存在模型生成格式问题，建议刷新对话重试。`
+            })}\n\n`);
+            break;
+          }
+          const errorStr = typeof part.error === 'object' ? JSON.stringify(part.error) : String(part.error || '');
+          res.write(`data: ${JSON.stringify({ 
+            type: "tool_error", 
+            error: errorStr,
+            toolName: part.toolName
+          })}\n\n`);
+          break;
+        }
+        case 'error':
+        case 'finish':
+          break;
       }
-      case 'tool-error': {
-        const errorStr = typeof part.error === 'object' ? JSON.stringify(part.error) : String(part.error || '');
+    } catch (writeError: any) {
+      console.error('Error writing to stream:', writeError);
+      try {
         res.write(`data: ${JSON.stringify({ 
-          type: "tool_error", 
-          error: errorStr
+          type: "stream_error", 
+          error: `流式输出错误: ${writeError.message}`
         })}\n\n`);
-        break;
-      }
+      } catch {}
     }
   }
 
   onAssistantMessage?.(assistantContent, true);
+  } catch (error: any) {
+    console.error('runChat error:', error);
+    try {
+      res.write(`data: ${JSON.stringify({ 
+        type: "error", 
+        error: `对话执行出错: ${error.message || String(error)}`
+      })}\n\n`);
+    } catch {}
+  }
 }

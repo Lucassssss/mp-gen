@@ -819,6 +819,7 @@ export function ChatContainer() {
                         </InputGroupButton>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent side="top" align="start" className="min-w-[160px]">
+                        <DropdownMenuItem onClick={() => setModel("minimax/MiniMax-M2.7")}>MiniMax-M2.7</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setModel("deepseek/deepseek-chat")}>deepseek-chat</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setModel("deepseek/deepseek-reasoner")}>deepseek-reasoner</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setModel("minimax/MiniMax-M2.5")}>MiniMax-M2.5</DropdownMenuItem>
