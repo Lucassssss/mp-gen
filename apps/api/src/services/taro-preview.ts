@@ -1,11 +1,19 @@
-import { spawn } from 'child_process';
+import spawn from 'cross-spawn';
 import path from 'path';
 import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
+import stripAnsi from 'strip-ansi';
+import kill from 'kill-port-fast';
 
 const TEMP_BASE_DIR = path.join(process.cwd(), '.temp');
 const PROJECTS_DIR = path.join(process.cwd(), '..', '..', 'projects');
+const PREVIEW_PORT = 11970;
+
+function decodeOutput(data: Buffer | string): string {
+  let text = typeof data === 'string' ? data : new TextDecoder('utf-8', { fatal: false }).decode(data);
+  return stripAnsi(text);
+}
 
 export interface ProjectInstance {
   id: string;
@@ -27,15 +35,32 @@ export interface PreviewResult {
   error?: string;
 }
 
-class TaroPreviewService {
+class MpPreviewService {
   private projects: Map<string, ProjectInstance> = new Map();
 
   private getLogger(context: string) {
     return {
-      info: (msg: string, data?: any) => console.log(`[TaroPreview][${context}] ${msg}`, data || ''),
-      error: (msg: string, err?: any) => console.error(`[TaroPreview][${context}] ERROR: ${msg}`, err || ''),
-      debug: (msg: string, data?: any) => console.log(`[TaroPreview][${context}] DEBUG: ${msg}`, data || ''),
+      info: (msg: string, data?: any) => console.log(`[MpPreview][${context}] ${msg}`, data || ''),
+      error: (msg: string, err?: any) => console.error(`[MpPreview][${context}] ERROR: ${msg}`, err || ''),
+      debug: (msg: string, data?: any) => console.log(`[MpPreview][${context}] DEBUG: ${msg}`, data || ''),
     };
+  }
+
+  private async killExistingProcesses(): Promise<void> {
+    const logger = this.getLogger('kill');
+    for (const [id, project] of this.projects) {
+      if (project.process) {
+        logger.info(`Killing process for project ${id}`);
+        project.process.kill();
+        project.process = undefined;
+      }
+    }
+    try {
+      await kill(PREVIEW_PORT, 'tcp');
+      logger.info(`Killed any process on port ${PREVIEW_PORT}`);
+    } catch (err) {
+      logger.debug(`No process on port ${PREVIEW_PORT} to kill`);
+    }
   }
 
   async ensureDir(dirPath: string): Promise<void> {
@@ -56,8 +81,8 @@ class TaroPreviewService {
       });
 
       let output = '';
-      npm.stdout?.on('data', (data) => { output += data.toString(); });
-      npm.stderr?.on('data', (data) => { output += data.toString(); });
+      npm.stdout?.on('data', (data) => { output += decodeOutput(data); });
+      npm.stderr?.on('data', (data) => { output += decodeOutput(data); });
 
       npm.on('close', (code) => {
         if (code === 0) {
@@ -103,7 +128,7 @@ class TaroPreviewService {
     const checkReady = (text: string) => {
       if (ready) return;
 
-      if (text.includes('Local:') && text.includes('http://localhost:')) {
+      if (text.includes('http://localhost')) {
         ready = true;
         logger.info('Server ready detected from URL');
         resolveReady();
@@ -118,13 +143,13 @@ class TaroPreviewService {
     };
 
     devProcess.stdout?.on('data', (data) => {
-      const text = data.toString();
+      const text = decodeOutput(data);
       logger.debug('stdout', text.slice(0, 300));
       checkReady(text);
     });
 
     devProcess.stderr?.on('data', (data) => {
-      const text = data.toString();
+      const text = decodeOutput(data);
       logger.debug('stderr', text.slice(0, 300));
       checkReady(text);
     });
@@ -148,23 +173,23 @@ class TaroPreviewService {
     const logger = this.getLogger(`create:${sessionId}`);
     logger.info('Creating project...');
 
+    await this.killExistingProcesses();
+
     const projectPath = path.join(PROJECTS_DIR, sessionId);
     await this.ensureDir(projectPath);
-
-    const port = 10000 + Math.floor(Math.random() * 9000);
 
     const project: ProjectInstance = {
       id: sessionId,
       name: sessionId,
       projectPath,
       previewUrl: null,
-      port,
+      port: PREVIEW_PORT,
       createdAt: new Date(),
       status: 'compiling',
     };
 
     this.projects.set(sessionId, project);
-    logger.info('Project created', { projectPath, port });
+    logger.info('Project created', { projectPath, port: PREVIEW_PORT });
 
     return {
       success: true,
@@ -177,6 +202,8 @@ class TaroPreviewService {
   async startPreview(sessionId: string): Promise<PreviewResult> {
     const logger = this.getLogger(`start:${sessionId}`);
     logger.info('Starting preview...');
+
+    await this.killExistingProcesses();
 
     let project = this.projects.get(sessionId);
 
@@ -193,34 +220,20 @@ class TaroPreviewService {
         };
       }
 
-      const port = 10000 + Math.floor(Math.random() * 9000);
       project = {
         id: sessionId,
         name: sessionId,
         projectPath,
         previewUrl: null,
-        port,
+        port: PREVIEW_PORT,
         createdAt: new Date(),
         status: 'compiling',
       };
       this.projects.set(sessionId, project);
-    }
-
-    if (project.process) {
-      logger.info('Stopping existing process...');
-      project.process.kill();
+    } else {
+      project.status = 'compiling';
+      project.previewUrl = null;
       project.process = undefined;
-    }
-
-    if (project.status === 'ready') {
-      logger.info('Project already ready');
-      return {
-        success: true,
-        projectId: sessionId,
-        previewUrl: project.previewUrl!,
-        status: 'ready',
-        message: 'Preview already running',
-      };
     }
 
     const hasDeps = await this.checkDependencies(project.projectPath);
@@ -270,15 +283,10 @@ class TaroPreviewService {
     logger.info('Restarting preview...');
 
     const project = this.projects.get(sessionId);
-    if (project?.process) {
-      logger.info('Killing existing process');
-      project.process.kill();
-      project.process = undefined;
-    }
-
     if (project) {
       project.status = 'compiling';
       project.previewUrl = null;
+      project.process = undefined;
     }
 
     return this.startPreview(sessionId);
@@ -375,16 +383,16 @@ class TaroPreviewService {
   }
 }
 
-export const taroPreviewService = new TaroPreviewService();
+export const mpPreviewService = new MpPreviewService();
 
-export const taroPreviewRouter = (() => {
+export const mpPreviewRouter = (() => {
   const { Router } = require('express');
   const router = Router();
 
   router.post('/create', async (req, res) => {
     try {
       const { sessionId } = req.body;
-      const result = await taroPreviewService.createProject(sessionId);
+      const result = await mpPreviewService.createProject(sessionId);
       res.json(result);
     } catch (error) {
       console.error('[taro-router] create error:', error);
@@ -395,7 +403,7 @@ export const taroPreviewRouter = (() => {
   router.post('/start/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const result = await taroPreviewService.startPreview(sessionId);
+      const result = await mpPreviewService.startPreview(sessionId);
       res.json(result);
     } catch (error) {
       console.error('[taro-router] start error:', error);
@@ -406,7 +414,7 @@ export const taroPreviewRouter = (() => {
   router.post('/restart/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const result = await taroPreviewService.restartPreview(sessionId);
+      const result = await mpPreviewService.restartPreview(sessionId);
       res.json(result);
     } catch (error) {
       console.error('[taro-router] restart error:', error);
@@ -417,7 +425,7 @@ export const taroPreviewRouter = (() => {
   router.post('/stop/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const result = await taroPreviewService.stopPreview(sessionId);
+      const result = await mpPreviewService.stopPreview(sessionId);
       res.json(result);
     } catch (error) {
       console.error('[taro-router] stop error:', error);
@@ -428,7 +436,7 @@ export const taroPreviewRouter = (() => {
   router.post('/refresh/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const result = await taroPreviewService.refreshPreview(sessionId);
+      const result = await mpPreviewService.refreshPreview(sessionId);
       res.json(result);
     } catch (error) {
       console.error('[taro-router] refresh error:', error);
@@ -439,7 +447,7 @@ export const taroPreviewRouter = (() => {
   router.get('/status/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const project = taroPreviewService.getProjectStatus(sessionId);
+      const project = mpPreviewService.getProjectStatus(sessionId);
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
@@ -458,7 +466,7 @@ export const taroPreviewRouter = (() => {
 
   router.get('/list', async (req, res) => {
     try {
-      const projects = taroPreviewService.getAllProjects();
+      const projects = mpPreviewService.getAllProjects();
       res.json({
         projects: projects.map(p => ({
           id: p.id,
@@ -478,7 +486,7 @@ export const taroPreviewRouter = (() => {
 })();
 
 export function cleanupAllProjects() {
-  taroPreviewService.cleanupAll();
+  mpPreviewService.cleanupAll();
 }
 
-export { TaroPreviewService };
+export { MpPreviewService };

@@ -426,7 +426,7 @@ export function ChatContainer() {
                         const projectSessionId = outputData.sessionId || outputData.id || currentConversation?.id;
                         if (projectSessionId) {
                           console.log('[Preview] Restarting preview for:', projectSessionId);
-                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/taro/restart/${projectSessionId}`, {
+                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/mp/restart/${projectSessionId}`, {
                             method: 'POST',
                           }).catch(err => console.error('[Preview] Restart failed:', err));
                         }

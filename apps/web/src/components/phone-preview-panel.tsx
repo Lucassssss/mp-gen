@@ -30,35 +30,35 @@ interface TaroApiResponse {
 }
 
 async function startPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/taro/start/${sessionId}`, {
+  const response = await fetch(`${API_BASE}/api/mp/start/${sessionId}`, {
     method: 'POST',
   });
   return response.json();
 }
 
 async function restartPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/taro/restart/${sessionId}`, {
+  const response = await fetch(`${API_BASE}/api/mp/restart/${sessionId}`, {
     method: 'POST',
   });
   return response.json();
 }
 
 async function stopPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/taro/stop/${sessionId}`, {
+  const response = await fetch(`${API_BASE}/api/mp/stop/${sessionId}`, {
     method: 'POST',
   });
   return response.json();
 }
 
 async function refreshPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/taro/refresh/${sessionId}`, {
+  const response = await fetch(`${API_BASE}/api/mp/refresh/${sessionId}`, {
     method: 'POST',
   });
   return response.json();
 }
 
 async function getStatus(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/taro/status/${sessionId}`);
+  const response = await fetch(`${API_BASE}/api/mp/status/${sessionId}`);
   return response.json();
 }
 

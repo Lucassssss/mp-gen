@@ -2,7 +2,7 @@ import { tool } from "ai6";
 import { z } from 'zod';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { taroPreviewService } from '../services/taro-preview.js';
+import { mpPreviewService } from '../services/taro-preview.js';
 
 const PROJECTS_DIR = path.join(process.cwd(), '..', '..', 'projects');
 
@@ -303,7 +303,7 @@ export const initTaroProjectTool = tool({
     console.log('[initTaroProject] package.json updated');
 
     console.log(`[initTaroProject] Project created, starting preview for ${sessionId}...`);
-    const previewResult = await taroPreviewService.startPreview(sessionId);
+    const previewResult = await mpPreviewService.startPreview(sessionId);
     console.log(`[initTaroProject] Preview result:`, previewResult);
 
     return {
@@ -369,7 +369,7 @@ export const editPageCodeTool = tool({
     }
 
     console.log(`[editPageCode] Code saved for ${projectId}-${pagePath}, triggering preview refresh...`);
-    const previewResult = await taroPreviewService.refreshPreview(projectId);
+    const previewResult = await mpPreviewService.refreshPreview(projectId);
     console.log(`[editPageCode] Preview refresh result:`, previewResult);
 
     return {
