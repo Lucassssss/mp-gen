@@ -1,5 +1,3 @@
----
-
 ## Design Guidelines
 
 ### Color System

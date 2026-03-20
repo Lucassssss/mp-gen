@@ -46,6 +46,7 @@ interface StreamingMessage extends Message {
 const MODELS = [
   { id: "deepseek/deepseek-chat", name: "DeepSeek Chat", provider: "DeepSeek" },
   { id: "deepseek/deepseek-reasoner", name: "DeepSeek Reasoner", provider: "DeepSeek" },
+  { id: "minimax/MiniMax-M2.7", name: "MiniMax-M2.7", provider: "Minimax" },
   { id: "minimax/MiniMax-M2.5", name: "MiniMax-M2.5", provider: "Minimax" },
   { id: "minimax/MiniMax-M2.5-highspeed", name: "MiniMax-M2.5-HighSpeed", provider: "Minimax" },
   { id: "minimax/MiniMax-M2.1-highspeed", name: "MiniMax-M2.1-HighSpeed", provider: "Minimax" },
@@ -90,7 +91,8 @@ export function ChatPanel({
   const [inputHeight, setInputHeight] = useState(52);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<ChatMode>("agent");
-  const [model, setModel] = useState<string>("deepseek/deepseek-chat");
+  // const [model, setModel] = useState<string>("deepseek/deepseek-chat");
+  const [model, setModel] = useState<string>("minimax/MiniMax-M2.7");
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showAgentSelector, setShowAgentSelector] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);

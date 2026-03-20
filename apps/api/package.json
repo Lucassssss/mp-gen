@@ -33,6 +33,7 @@
     "kill-port": "^2.0.1",
     "kill-port-fast": "^0.2.3",
     "langchain": "^1.2.30",
+    "lucide-react-taro": "1.4.0",
     "nodemailer": "^8.0.2",
     "openai": "^6.27.0",
     "pino-pretty": "^13.1.3",
