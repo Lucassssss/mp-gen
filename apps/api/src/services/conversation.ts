@@ -125,9 +125,9 @@ export function clearMessages(conversationId: string): void {
   db.prepare(`UPDATE conversations SET updated_at = ? WHERE id = ?`).run(Date.now(), conversationId);
 }
 
-export async function generateTitle(userMessage: string): Promise<string> {
+export async function generateTitle(userMessage: string, modelName: string): Promise<string> {
   const { text } = await generateText({
-    model: Model.create("deepseek/deepseek-chat"),
+    model: Model.create(modelName),
     messages: [
       {
         role: "user",

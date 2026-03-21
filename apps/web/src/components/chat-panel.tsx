@@ -443,6 +443,21 @@ export function ChatPanel({
           m.id === assistantMessage.id ? { ...m, isComplete: true } : m
         )
       );
+
+      if (currentConversation) {
+        fetch(`${API_BASE}/conversations/${currentConversation.id}/generate-title`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        }).then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            if (data.title) {
+              useConversationStore.getState().updateConversationTitle(currentConversation.id, data.title);
+            }
+          }
+        }).catch(console.error);
+      }
     } catch (error) {
       console.error("发送消息失败:", error);
     } finally {

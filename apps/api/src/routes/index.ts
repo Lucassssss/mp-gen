@@ -85,6 +85,35 @@ router.put("/conversations/:id", (req, res) => {
   res.json({ success: true });
 });
 
+router.post("/conversations/:id/generate-title", async (req, res) => {
+  const { model } = req.body;
+  const conversationId = req.params.id;
+
+  const conversation = getConversation(conversationId);
+  if (!conversation) {
+    return res.status(404).json({ error: "Conversation not found" });
+  }
+
+  const messages = getMessages(conversationId);
+  if (messages.length === 0) {
+    return res.status(400).json({ error: "No messages in conversation" });
+  }
+
+  const firstUserMessage = messages.find((m) => m.role === "user");
+  if (!firstUserMessage) {
+    return res.status(400).json({ error: "No user message found" });
+  }
+
+  try {
+    const title = await generateTitle(firstUserMessage.content, model || conversation.model);
+    updateConversation(conversationId, { title });
+    res.json({ title });
+  } catch (error) {
+    console.error("Generate title error:", error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 router.delete("/conversations/:id", (req, res) => {
   deleteConversation(req.params.id);
   res.json({ success: true });
@@ -170,13 +199,6 @@ router.post("/api/chat", async (req, res) => {
 
       if (lastAssistantContent) {
         addMessage(currentConversationId, "assistant", lastAssistantContent);
-      }
-
-      const currentMessages = getMessages(currentConversationId);
-      if (currentMessages.length === 2) {
-        const title = await generateTitle(lastUserMessage);
-        updateConversation(currentConversationId, { title });
-        res.write(`data: ${JSON.stringify({ type: "title_generated", title })}\n\n`);
       }
     } catch (error) {
       console.error("Chat error:", error);
