@@ -27,6 +27,10 @@ interface ConversationStore {
   loading: boolean;
   sending: boolean;
   error: string | null;
+  pendingPreviewAction: {
+    action: 'start' | 'stop' | 'restart' | 'refresh' | 'create';
+    sessionId: string;
+  } | null;
 
   fetchConversations: () => Promise<void>;
   createConversation: (title?: string) => Promise<Conversation>;
@@ -34,6 +38,8 @@ interface ConversationStore {
   deleteConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   clearCurrentMessages: () => Promise<void>;
+  triggerPreviewAction: (action: 'start' | 'stop' | 'restart' | 'refresh' | 'create', sessionId: string) => void;
+  clearPreviewAction: () => void;
 
   sendMessage: (content: string) => Promise<void>;
 }
@@ -47,6 +53,15 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   loading: false,
   sending: false,
   error: null,
+  pendingPreviewAction: null,
+
+  triggerPreviewAction: (action, sessionId) => {
+    set({ pendingPreviewAction: { action, sessionId } });
+  },
+
+  clearPreviewAction: () => {
+    set({ pendingPreviewAction: null });
+  },
 
   fetchConversations: async () => {
     set({ loading: true, error: null });

@@ -37,6 +37,15 @@ export interface PreviewResult {
 
 class MpPreviewService {
   private projects: Map<string, ProjectInstance> = new Map();
+  private errors: Map<string, Array<{
+    type: string;
+    message: string;
+    filename?: string;
+    lineno?: number;
+    colno?: number;
+    stack?: string;
+    timestamp: number;
+  }>> = new Map();
 
   private getLogger(context: string) {
     return {
@@ -368,6 +377,40 @@ class MpPreviewService {
     return Array.from(this.projects.values());
   }
 
+  storeErrors(sessionId: string, errors: Array<{
+    type: string;
+    message: string;
+    filename?: string;
+    lineno?: number;
+    colno?: number;
+    stack?: string;
+    timestamp: number;
+  }>): void {
+    const existing = this.errors.get(sessionId) || [];
+    const newErrors = errors.filter(e =>
+      !existing.some(ex =>
+        ex.message === e.message && ex.type === e.type
+      )
+    );
+    this.errors.set(sessionId, [...existing, ...newErrors]);
+  }
+
+  getErrors(sessionId: string): Array<{
+    type: string;
+    message: string;
+    filename?: string;
+    lineno?: number;
+    colno?: number;
+    stack?: string;
+    timestamp: number;
+  }> {
+    return this.errors.get(sessionId) || [];
+  }
+
+  clearErrors(sessionId: string): void {
+    this.errors.delete(sessionId);
+  }
+
   async cleanupProject(sessionId: string): Promise<void> {
     const project = this.projects.get(sessionId);
     if (project?.process) {
@@ -478,6 +521,43 @@ export const mpPreviewRouter = (() => {
       });
     } catch (error) {
       console.error('[taro-router] list error:', error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  router.post('/errors/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { errors } = req.body;
+      if (!Array.isArray(errors)) {
+        return res.status(400).json({ error: 'errors must be an array' });
+      }
+      mpPreviewService.storeErrors(sessionId, errors);
+      res.json({ success: true, count: errors.length });
+    } catch (error) {
+      console.error('[taro-router] errors post error:', error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  router.get('/errors/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const errors = mpPreviewService.getErrors(sessionId);
+      res.json({ errors });
+    } catch (error) {
+      console.error('[taro-router] errors get error:', error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  router.delete('/errors/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      mpPreviewService.clearErrors(sessionId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[taro-router] errors delete error:', error);
       res.status(500).json({ error: String(error) });
     }
   });

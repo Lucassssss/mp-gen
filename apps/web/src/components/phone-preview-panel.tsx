@@ -87,6 +87,8 @@ function StatusBadge({ status }: { status: PreviewState['status'] }) {
 
 export function PhonePreviewPanel() {
   const currentConversation = useConversationStore((state) => state.currentConversation);
+  const pendingPreviewAction = useConversationStore((state) => state.pendingPreviewAction);
+  const clearPreviewAction = useConversationStore((state) => state.clearPreviewAction);
   const sessionId = currentConversation?.id;
 
   const [state, setState] = React.useState<PreviewState>({
@@ -97,6 +99,53 @@ export function PhonePreviewPanel() {
   });
 
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
+
+  const [previewErrors, setPreviewErrors] = React.useState<Array<{
+    type: string;
+    message: string;
+    filename?: string;
+    lineno?: number;
+    colno?: number;
+    stack?: string;
+    timestamp: number;
+  }>>([]);
+
+  const reportPreviewErrors = React.useCallback(async (sessionId: string, errors: typeof previewErrors) => {
+    if (errors.length === 0) return;
+    try {
+      await fetch(`${API_BASE}/api/mp/errors/${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ errors }),
+      });
+    } catch (err) {
+      console.error('[PhonePreview] Failed to report errors:', err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CAPTURED_ERROR' && event.data?.error) {
+        const error = event.data.error;
+        setPreviewErrors(prev => {
+          const exists = prev.some(e =>
+            e.message === error.message &&
+            e.type === error.type &&
+            Math.abs(e.timestamp - error.timestamp) < 1000
+          );
+          if (exists) return prev;
+          const updated = [...prev, error];
+          if (sessionId) {
+            reportPreviewErrors(sessionId, updated);
+          }
+          return updated;
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [sessionId, reportPreviewErrors]);
 
   const initPreview = React.useCallback(async () => {
     if (!sessionId) return;
@@ -227,6 +276,43 @@ export function PhonePreviewPanel() {
       setActionLoading(null);
     }
   };
+
+  const actionsRef = React.useRef({ handleStop, handleRestart, handleRefresh, initPreview });
+  actionsRef.current = { handleStop, handleRestart, handleRefresh, initPreview };
+
+  React.useEffect(() => {
+    if (!pendingPreviewAction || !sessionId) return;
+    if (pendingPreviewAction.sessionId !== sessionId) {
+      clearPreviewAction();
+      return;
+    }
+
+    const { action } = pendingPreviewAction;
+    console.log('[PhonePreview] AI triggered action:', action);
+
+    const executeAction = async () => {
+      switch (action) {
+        case 'start':
+          await actionsRef.current.initPreview();
+          break;
+        case 'stop':
+          await actionsRef.current.handleStop();
+          break;
+        case 'restart':
+          await actionsRef.current.handleRestart();
+          break;
+        case 'refresh':
+          await actionsRef.current.handleRefresh();
+          break;
+        case 'create':
+          await actionsRef.current.initPreview();
+          break;
+      }
+    };
+
+    executeAction();
+    clearPreviewAction();
+  }, [pendingPreviewAction, sessionId, clearPreviewAction]);
 
   const renderHeader = () => (
     <div className="px-3 py-2.5 border-b border-border/50 flex items-center justify-between shrink-0 bg-card/50">

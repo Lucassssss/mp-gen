@@ -9,6 +9,8 @@ import { Bot, Plus, ArrowUp, Sparkles } from "lucide-react";
 import { useConversationStore } from "@/hooks/useConversations";
 import { useArtifactStore, type Artifact } from "./artifact-panel";
 
+const PREVIEW_TOOLS = ['start_preview', 'stop_preview', 'restart_preview', 'refresh_preview', 'create_preview'];
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 import {
   InputGroup,
@@ -402,7 +404,26 @@ export function ChatContainer() {
 
                 if (parsed.type === "tool_result") {
                   let artifactProcessed = false;
-                  
+                  const toolName = parsed.toolName?.toLowerCase() || "";
+
+                  if (PREVIEW_TOOLS.some(t => toolName.includes(t))) {
+                    try {
+                      const outputData = typeof parsed.output === 'string'
+                        ? JSON.parse(parsed.output)
+                        : parsed.output;
+                      if (outputData && outputData.projectId) {
+                        const action = toolName.includes('start') ? 'start'
+                          : toolName.includes('stop') ? 'stop'
+                          : toolName.includes('restart') ? 'restart'
+                          : toolName.includes('refresh') ? 'refresh'
+                          : 'create';
+                        useConversationStore.getState().triggerPreviewAction(action, outputData.projectId);
+                      }
+                    } catch (e) {
+                      console.log('[Preview] Failed to parse preview tool result');
+                    }
+                  }
+
                   try {
                     const outputData = typeof parsed.output === 'string' 
                       ? JSON.parse(parsed.output) 

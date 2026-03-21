@@ -5,6 +5,7 @@ import path from "path";
 import fsSync from "fs";
 import { exec } from "child_process";
 import { getToolSessionId } from "../mini-program.js";
+import { mpPreviewService } from "../../services/taro-preview.js";
 
 const BASE_PROJECTS_DIR = path.join(process.cwd(), "..", "..", "projects");
 
@@ -527,6 +528,167 @@ const deleteFileTool = tool({
   },
 });
 
+const checkErrorsTool = tool({
+  description: "检查项目运行时的错误。完成业务代码开发后，必须调用此工具检查项目是否存在运行错误。",
+  inputSchema: z.object({}),
+  execute: async () => {
+    try {
+      const sessionId = getToolSessionId();
+      if (!sessionId) {
+        return { error: "No active session", errors: [] };
+      }
+
+      const response = await fetch(`http://localhost:3001/api/mp/errors/${sessionId}`);
+      if (!response.ok) {
+        return { error: "Failed to fetch errors", errors: [] };
+      }
+
+      console.log("Response:", response);
+
+      const data = await response.json();
+      const errors = data.errors || [];
+
+      if (errors.length === 0) {
+        return {
+          hasErrors: false,
+          errors: [],
+          message: "项目运行正常，未检测到错误",
+        };
+      }
+
+      const errorSummary = errors.map((e: any, i: number) =>
+        `${i + 1}. [${e.type}] ${e.message}${e.filename ? ` (${e.filename}${e.lineno ? `:${e.lineno}` : ''})` : ''}${e.stack ? `\n   Stack: ${e.stack.split('\n').slice(0, 3).join('\n   ')}` : ''}`
+      ).join('\n');
+
+      return {
+        hasErrors: true,
+        count: errors.length,
+        errors,
+        message: `检测到 ${errors.length} 个错误:\n${errorSummary}`,
+      };
+    } catch (error: any) {
+      return { error: error.message || String(error), errors: [] };
+    }
+  },
+});
+
+const createPreviewTool = tool({
+  description: "创建预览项目。初始化项目目录和基本结构。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID，用于标识项目"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const result = await mpPreviewService.createProject(sessionId);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
+const startPreviewTool = tool({
+  description: "启动预览服务。安装依赖（如需要）并启动开发服务器。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const result = await mpPreviewService.startPreview(sessionId);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
+const stopPreviewTool = tool({
+  description: "停止预览服务。关闭开发服务器。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const result = await mpPreviewService.stopPreview(sessionId);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
+const restartPreviewTool = tool({
+  description: "重启预览服务。相当于先停止再启动。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const result = await mpPreviewService.restartPreview(sessionId);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
+const refreshPreviewTool = tool({
+  description: "刷新预览。通过修改配置文件触发热更新。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const result = await mpPreviewService.refreshPreview(sessionId);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
+const getPreviewStatusTool = tool({
+  description: "获取预览项目状态。包括编译状态、预览URL等信息。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      const project = mpPreviewService.getProjectStatus(sessionId);
+      if (!project) {
+        return { found: false, message: "项目未找到" };
+      }
+      return {
+        found: true,
+        id: project.id,
+        name: project.name,
+        status: project.status,
+        previewUrl: project.previewUrl,
+        port: project.port,
+        createdAt: project.createdAt,
+        message: `项目状态: ${project.status}`,
+      };
+    } catch (error: any) {
+      return { error: error.message || String(error) };
+    }
+  },
+});
+
+const clearPreviewErrorsTool = tool({
+  description: "清除预览错误记录。",
+  inputSchema: z.object({
+    sessionId: z.string().describe("会话ID"),
+  }),
+  execute: async ({ sessionId }) => {
+    try {
+      mpPreviewService.clearErrors(sessionId);
+      return { success: true, message: "错误记录已清除" };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
 const taroLucideTabbarGenerateTool = tool({
   description: "为tabbar生成png格式的lucide图标。如tabbar的home.png和home-active.png。",
   inputSchema: z.object({
@@ -587,4 +749,12 @@ export const codeTools = {
   replaceFileContentTool,
   deleteFileTool,
   taroLucideTabbarGenerateTool,
+  checkErrorsTool,
+  createPreviewTool,
+  startPreviewTool,
+  stopPreviewTool,
+  restartPreviewTool,
+  refreshPreviewTool,
+  getPreviewStatusTool,
+  clearPreviewErrorsTool,
 };
