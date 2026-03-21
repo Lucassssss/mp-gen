@@ -283,10 +283,14 @@ export default {
     list: [
       {
         pagePath: 'page/component/index',
+        iconPath: './assets/images/tabbar/component.png',
+        selectedIconPath: './assets/images/tabbar/component-active.png',
         text: '组件',
       },
       {
         pagePath: 'page/API/index',
+        iconPath: './assets/images/tabbar/api.png',
+        selectedIconPath: './assets/images/tabbar/api-active.png',
         text: '接口',
       },
     ],
@@ -294,5 +298,8 @@ export default {
 }
 
 ```  
+- tabbar 图标
+tabbar 图标使用 taroLucideTab_generate_tool 工具进行生成，如果使用了底部导航栏，必须在 src/app.config.ts 中配置默认图标和选中图标。  
+
 
 

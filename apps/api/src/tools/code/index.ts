@@ -3,6 +3,7 @@ import { z } from "zod";
 import { promises as fs } from "fs";
 import path from "path";
 import fsSync from "fs";
+import { exec } from "child_process";
 import { getToolSessionId } from "../mini-program.js";
 
 const BASE_PROJECTS_DIR = path.join(process.cwd(), "..", "..", "projects");
@@ -526,6 +527,55 @@ const deleteFileTool = tool({
   },
 });
 
+const taroLucideTabbarGenerateTool = tool({
+  description: "为tabbar生成png格式的lucide图标。如tabbar的home.png和home-active.png。",
+  inputSchema: z.object({
+    icons: z.array(z.string()).describe("图标名称数组，如 ['House', 'Settings', 'User']"),
+    default_color: z.string().describe("默认状态颜色，如 '#999999'"),
+    active_color: z.string().describe("选中状态颜色，如 '#1890ff'"),
+  }),
+  execute: async ({ icons, default_color, active_color }) => {
+    try {
+      const projectPath = getCurrentProjectPath();
+      const outputDir = path.join(projectPath, "src/assets/images/tabbar");
+      const command = `cd ${projectPath} && node_modules/.bin/taro-lucide-tabbar ${icons.join(" ")} -c "${default_color}" -a "${active_color}" -o "${outputDir}"`;
+
+      const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+        exec(command, { cwd: projectPath }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ stdout, stderr, exitCode: (error as any).code || 1 });
+          } else {
+            resolve({ stdout, stderr, exitCode: 0 });
+          }
+        });
+      });
+
+      if (result.exitCode !== 0) {
+        return {
+          success: false,
+          error: result.stderr || "图标生成失败",
+          stdout: result.stdout,
+        };
+      }
+
+      const generatedImages = icons.map((name) => ({
+        name,
+        path: `${outputDir}/${name}.png`,
+        activePath: `${outputDir}/${name}-active.png`,
+      }));
+
+      return {
+        success: true,
+        message: `成功生成 ${generatedImages.length} 个图标`,
+        command,
+        images: generatedImages,
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    }
+  },
+});
+
 export const codeTools = {
   searchCodebaseTool,
   grepSearchTool,
@@ -536,4 +586,5 @@ export const codeTools = {
   writeToFileTool,
   replaceFileContentTool,
   deleteFileTool,
+  taroLucideTabbarGenerateTool,
 };
