@@ -369,7 +369,7 @@ export const editPageCodeTool = tool({
     }
 
     console.log(`[editPageCode] Code saved for ${projectId}-${pagePath}, triggering preview refresh...`);
-    const previewResult = await mpPreviewService.refreshPreview(projectId);
+    const previewResult = await mpPreviewService.startPreview(projectId);
     console.log(`[editPageCode] Preview refresh result:`, previewResult);
 
     return {

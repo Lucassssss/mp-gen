@@ -28,7 +28,7 @@ interface ConversationStore {
   sending: boolean;
   error: string | null;
   pendingPreviewAction: {
-    action: 'start' | 'stop' | 'restart' | 'refresh' | 'create';
+    action: 'start' | 'create';
     sessionId: string;
   } | null;
 
@@ -38,7 +38,7 @@ interface ConversationStore {
   deleteConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   clearCurrentMessages: () => Promise<void>;
-  triggerPreviewAction: (action: 'start' | 'stop' | 'restart' | 'refresh' | 'create', sessionId: string) => void;
+  triggerPreviewAction: (action: 'start' | 'create', sessionId: string) => void;
   clearPreviewAction: () => void;
 
   sendMessage: (content: string) => Promise<void>;

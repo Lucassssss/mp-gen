@@ -9,7 +9,7 @@ import { Bot, Plus, ArrowUp, Sparkles } from "lucide-react";
 import { useConversationStore } from "@/hooks/useConversations";
 import { useArtifactStore, type Artifact } from "./artifact-panel";
 
-const PREVIEW_TOOLS = ['start_preview', 'stop_preview', 'restart_preview', 'refresh_preview', 'create_preview'];
+const PREVIEW_TOOLS = ['start_preview', 'create_preview'];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 import {
@@ -412,11 +412,7 @@ export function ChatContainer() {
                         ? JSON.parse(parsed.output)
                         : parsed.output;
                       if (outputData && outputData.projectId) {
-                        const action = toolName.includes('start') ? 'start'
-                          : toolName.includes('stop') ? 'stop'
-                          : toolName.includes('restart') ? 'restart'
-                          : toolName.includes('refresh') ? 'refresh'
-                          : 'create';
+                        const action = toolName.includes('create') ? 'create' : 'start';
                         useConversationStore.getState().triggerPreviewAction(action, outputData.projectId);
                       }
                     } catch (e) {
@@ -446,10 +442,10 @@ export function ChatContainer() {
                       if (outputData.artifactType === 'mini-program' || outputData.artifactType === 'h5' || outputData.artifactType === 'web' || outputData.artifactType === 'taro-project') {
                         const projectSessionId = outputData.sessionId || outputData.id || currentConversation?.id;
                         if (projectSessionId) {
-                          console.log('[Preview] Restarting preview for:', projectSessionId);
-                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/mp/restart/${projectSessionId}`, {
+                          console.log('[Preview] Starting preview for:', projectSessionId);
+                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/mp/start/${projectSessionId}`, {
                             method: 'POST',
-                          }).catch(err => console.error('[Preview] Restart failed:', err));
+                          }).catch(err => console.error('[Preview] Start failed:', err));
                         }
                       }
                       

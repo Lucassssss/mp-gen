@@ -287,88 +287,6 @@ class MpPreviewService {
     };
   }
 
-  async restartPreview(sessionId: string): Promise<PreviewResult> {
-    const logger = this.getLogger(`restart:${sessionId}`);
-    logger.info('Restarting preview...');
-
-    const project = this.projects.get(sessionId);
-    if (project) {
-      project.status = 'compiling';
-      project.previewUrl = null;
-      project.process = undefined;
-    }
-
-    return this.startPreview(sessionId);
-  }
-
-  async stopPreview(sessionId: string): Promise<PreviewResult> {
-    const logger = this.getLogger(`stop:${sessionId}`);
-    logger.info('Stopping preview...');
-
-    const project = this.projects.get(sessionId);
-    if (!project) {
-      return {
-        success: false,
-        projectId: sessionId,
-        status: 'stopped',
-        message: 'Project not found in memory',
-      };
-    }
-
-    if (project.process) {
-      project.process.kill();
-      project.process = undefined;
-    }
-
-    project.status = 'stopped';
-    project.previewUrl = null;
-    logger.info('Preview stopped');
-
-    return {
-      success: true,
-      projectId: sessionId,
-      status: 'stopped',
-      message: 'Preview stopped',
-    };
-  }
-
-  async refreshPreview(sessionId: string): Promise<PreviewResult> {
-    const logger = this.getLogger(`refresh:${sessionId}`);
-    logger.info('Refreshing preview...');
-
-    const project = this.projects.get(sessionId);
-    if (!project) {
-      logger.info('Project not found, starting fresh');
-      return this.startPreview(sessionId);
-    }
-
-    if (project.status !== 'ready' || !project.process) {
-      logger.info('Project not running, starting...');
-      return this.startPreview(sessionId);
-    }
-
-    logger.info('Triggering hot reload via file touch');
-
-    const srcPath = path.join(project.projectPath, 'src');
-    try {
-      const files = await fs.readdir(srcPath);
-      const configFile = path.join(project.projectPath, 'src', 'app.config.ts');
-      const stat = await fs.stat(configFile);
-      await fs.writeFile(configFile, await fs.readFile(configFile, 'utf-8'));
-      logger.info('Touched config file to trigger reload');
-    } catch (err) {
-      logger.error('Failed to trigger refresh', err);
-    }
-
-    return {
-      success: true,
-      projectId: sessionId,
-      previewUrl: project.previewUrl!,
-      status: project.status,
-      message: 'Refresh triggered',
-    };
-  }
-
   getProjectStatus(sessionId: string): ProjectInstance | null {
     return this.projects.get(sessionId) || null;
   }
@@ -450,39 +368,6 @@ export const mpPreviewRouter = (() => {
       res.json(result);
     } catch (error) {
       console.error('[taro-router] start error:', error);
-      res.status(500).json({ error: String(error) });
-    }
-  });
-
-  router.post('/restart/:sessionId', async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const result = await mpPreviewService.restartPreview(sessionId);
-      res.json(result);
-    } catch (error) {
-      console.error('[taro-router] restart error:', error);
-      res.status(500).json({ error: String(error) });
-    }
-  });
-
-  router.post('/stop/:sessionId', async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const result = await mpPreviewService.stopPreview(sessionId);
-      res.json(result);
-    } catch (error) {
-      console.error('[taro-router] stop error:', error);
-      res.status(500).json({ error: String(error) });
-    }
-  });
-
-  router.post('/refresh/:sessionId', async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const result = await mpPreviewService.refreshPreview(sessionId);
-      res.json(result);
-    } catch (error) {
-      console.error('[taro-router] refresh error:', error);
       res.status(500).json({ error: String(error) });
     }
   });

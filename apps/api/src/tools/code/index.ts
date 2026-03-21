@@ -588,58 +588,13 @@ const createPreviewTool = tool({
 });
 
 const startPreviewTool = tool({
-  description: "启动预览服务。安装依赖（如需要）并启动开发服务器。",
+  description: "启动预览服务。安装依赖（如需要）并启动开发服务器。如果已启动会自动重启。",
   inputSchema: z.object({
     sessionId: z.string().describe("会话ID"),
   }),
   execute: async ({ sessionId }) => {
     try {
       const result = await mpPreviewService.startPreview(sessionId);
-      return result;
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
-    }
-  },
-});
-
-const stopPreviewTool = tool({
-  description: "停止预览服务。关闭开发服务器。",
-  inputSchema: z.object({
-    sessionId: z.string().describe("会话ID"),
-  }),
-  execute: async ({ sessionId }) => {
-    try {
-      const result = await mpPreviewService.stopPreview(sessionId);
-      return result;
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
-    }
-  },
-});
-
-const restartPreviewTool = tool({
-  description: "重启预览服务。相当于先停止再启动。",
-  inputSchema: z.object({
-    sessionId: z.string().describe("会话ID"),
-  }),
-  execute: async ({ sessionId }) => {
-    try {
-      const result = await mpPreviewService.restartPreview(sessionId);
-      return result;
-    } catch (error: any) {
-      return { success: false, error: error.message || String(error) };
-    }
-  },
-});
-
-const refreshPreviewTool = tool({
-  description: "刷新预览。通过修改配置文件触发热更新。",
-  inputSchema: z.object({
-    sessionId: z.string().describe("会话ID"),
-  }),
-  execute: async ({ sessionId }) => {
-    try {
-      const result = await mpPreviewService.refreshPreview(sessionId);
       return result;
     } catch (error: any) {
       return { success: false, error: error.message || String(error) };
@@ -752,9 +707,6 @@ export const codeTools = {
   checkErrorsTool,
   createPreviewTool,
   startPreviewTool,
-  stopPreviewTool,
-  restartPreviewTool,
-  refreshPreviewTool,
   getPreviewStatusTool,
   clearPreviewErrorsTool,
 };

@@ -1,9 +1,7 @@
 import * as React from "react";
 import {
   Smartphone,
-  RefreshCw,
   Play,
-  Square,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -31,27 +29,6 @@ interface TaroApiResponse {
 
 async function startPreview(sessionId: string): Promise<TaroApiResponse> {
   const response = await fetch(`${API_BASE}/api/mp/start/${sessionId}`, {
-    method: 'POST',
-  });
-  return response.json();
-}
-
-async function restartPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/mp/restart/${sessionId}`, {
-    method: 'POST',
-  });
-  return response.json();
-}
-
-async function stopPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/mp/stop/${sessionId}`, {
-    method: 'POST',
-  });
-  return response.json();
-}
-
-async function refreshPreview(sessionId: string): Promise<TaroApiResponse> {
-  const response = await fetch(`${API_BASE}/api/mp/refresh/${sessionId}`, {
     method: 'POST',
   });
   return response.json();
@@ -234,51 +211,8 @@ export function PhonePreviewPanel() {
     }
   };
 
-  const handleRestart = async () => {
-    if (!sessionId) return;
-    setActionLoading('restart');
-    try {
-      const result = await restartPreview(sessionId);
-      console.log('[PhonePreview] handleRestart:', result);
-      if (result.success) {
-        setState(s => ({ ...s, status: 'compiling', previewUrl: null }));
-        await initPreview();
-      }
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleStop = async () => {
-    if (!sessionId) return;
-    setActionLoading('stop');
-    try {
-      const result = await stopPreview(sessionId);
-      console.log('[PhonePreview] handleStop:', result);
-      if (result.success) {
-        setState(s => ({ ...s, previewUrl: null, status: 'idle' }));
-      }
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleRefresh = async () => {
-    if (!sessionId) return;
-    setActionLoading('refresh');
-    try {
-      const result = await refreshPreview(sessionId);
-      console.log('[PhonePreview] handleRefresh:', result);
-      if (result.success) {
-        setState(s => ({ ...s, status: result.status === 'ready' ? 'ready' : s.status }));
-      }
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const actionsRef = React.useRef({ handleStop, handleRestart, handleRefresh, initPreview });
-  actionsRef.current = { handleStop, handleRestart, handleRefresh, initPreview };
+  const actionsRef = React.useRef({ initPreview });
+  actionsRef.current = { initPreview };
 
   React.useEffect(() => {
     if (!pendingPreviewAction || !sessionId) return;
@@ -291,22 +225,8 @@ export function PhonePreviewPanel() {
     console.log('[PhonePreview] AI triggered action:', action);
 
     const executeAction = async () => {
-      switch (action) {
-        case 'start':
-          await actionsRef.current.initPreview();
-          break;
-        case 'stop':
-          await actionsRef.current.handleStop();
-          break;
-        case 'restart':
-          await actionsRef.current.handleRestart();
-          break;
-        case 'refresh':
-          await actionsRef.current.handleRefresh();
-          break;
-        case 'create':
-          await actionsRef.current.initPreview();
-          break;
+      if (action === 'start' || action === 'create') {
+        await actionsRef.current.initPreview();
       }
     };
 
@@ -330,52 +250,15 @@ export function PhonePreviewPanel() {
           variant="ghost"
           size="sm"
           onClick={handleStart}
-          disabled={actionLoading !== null || state.status === 'ready'}
-          title="启动预览"
+          disabled={actionLoading !== null}
+          title={state.status === 'idle' ? '启动预览' : '重启预览'}
         >
-          {actionLoading === 'start' ? (
+          {actionLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
+          ) : state.status === 'idle' ? (
+            <Play className="w-4 h-4" />
           ) : (
             <Play className="w-4 h-4" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRestart}
-          disabled={actionLoading !== null}
-          title="重启预览"
-        >
-          {actionLoading === 'restart' ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStop}
-          disabled={actionLoading !== null || state.status === 'idle'}
-          title="停止预览"
-        >
-          {actionLoading === 'stop' ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Square className="w-4 h-4" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={actionLoading !== null || state.status !== 'ready'}
-          title="刷新预览"
-        >
-          {actionLoading === 'refresh' ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
           )}
         </Button>
       </div>
@@ -401,7 +284,7 @@ export function PhonePreviewPanel() {
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4 text-center">
           <AlertCircle className="w-8 h-8 text-red-500" />
           <p className="text-sm text-red-500">{state.error}</p>
-          <Button variant="outline" size="sm" onClick={handleRestart}>
+          <Button variant="outline" size="sm" onClick={handleStart}>
             重试
           </Button>
         </div>
