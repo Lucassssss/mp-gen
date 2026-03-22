@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, memo } from "react";
-import { User, Bot, Copy, Check } from "lucide-react";
+import { User, Bot } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ReasoningContent } from "./reasoning-content";
 import { ToolResultContent } from "./tool-result-content";
+import { MessageActionButtons } from "./message-action-buttons";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 function formatMessageTime(timestamp: number | Date): string {
   const date = new Date(timestamp);
@@ -52,6 +55,8 @@ export interface Message {
 interface ChatMessageProps {
   message: Message;
   isStreaming?: boolean;
+  onDelete?: (messageId: string) => void;
+  onMessageDeleted?: () => void;
 }
 
 function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
@@ -84,9 +89,11 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
   );
 }
 
-export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({ message, isStreaming, onMessageDeleted }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -94,8 +101,65 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("[ChatMessage] 点击删除按钮, messageId:", message.id);
+    
+    if (isDeleting || !message.id) {
+      console.log("[ChatMessage] 跳过删除 - isDeleting:", isDeleting, "messageId:", message.id);
+      return;
+    }
+    
+    if (!window.confirm("确定要删除这条消息吗？")) {
+      console.log("[ChatMessage] 用户取消删除");
+      return;
+    }
+
+    console.log("[ChatMessage] 开始删除流程");
+    setIsDeleting(true);
+    
+    try {
+      console.log("[ChatMessage] 发送删除请求到:", `${API_BASE}/messages/${message.id}`);
+      
+      const response = await fetch(`${API_BASE}/messages/${message.id}`, {
+        method: "DELETE",
+      });
+      
+      console.log("[ChatMessage] API 响应状态:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`删除失败: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("[ChatMessage] 删除成功:", result);
+      
+      // 标记为已删除，触发淡出动画
+      setIsDeleted(true);
+      
+      // 等待动画完成后通知父组件
+      setTimeout(() => {
+        if (onMessageDeleted) {
+          onMessageDeleted();
+        }
+      }, 300);
+      
+    } catch (error) {
+      console.error("[ChatMessage] 删除失败:", error);
+      alert("删除失败，请重试");
+      setIsDeleting(false);
+    }
+  };
+
+  // 如果已删除，不渲染
+  if (isDeleted) {
+    return null;
+  }
+
   return (
-    <div className={isUser ? "flex justify-end" : "flex justify-start w-full"}>
+    <div className={`group ${isUser ? "flex justify-end" : "flex justify-start w-full"}`}>
       <div className={`chat-message-wrapper flex gap-2 sm:gap-3 max-w-full min-w-0 ${isUser ? "flex-row-reverse max-w-[90%] sm:max-w-[85%]" : "w-full"}`}>
         {/* 头像 - 使用响应式类和容器查询在窄宽度时自动隐藏 */}
         <div className="chat-avatar hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center shrink-0">
@@ -111,7 +175,7 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
         </div>
         <div className={`flex flex-col min-w-0 flex-1 ${isUser ? "items-end" : "items-start"}`}>
           <div
-            className={`group relative min-w-0 max-w-full ${
+            className={`relative min-w-0 max-w-full ${
               isUser
                 ? "bg-gradient-to-br from-[#4e83fd] to-[#3370ff] text-white px-4 py-3"
                 : "bg-background w-full"
@@ -306,30 +370,28 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming }: C
                 )}
               </div>
             )}
-            {!isUser && (
-              <button
-                onClick={handleCopy}
-                className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted ${isStreaming ? 'pointer-events-none' : ''}`}
-                title="复制"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-muted-foreground" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                )}
-              </button>
-            )}
+
           </div>
-          <div className="flex items-center gap-2 mt-1.5 px-1">
-            <span className="text-xs text-muted-foreground/70">
-              {formatMessageTime(message.timestamp)}
-            </span>
-            {!isUser && copied && (
-              <span className="text-xs text-muted-foreground">已复制</span>
-            )}
-            {!isUser && isStreaming && (
-              <span className="text-xs text-primary animate-pulse">正在输入...</span>
-            )}
+          {/* 操作按钮和时间 - 放在消息体外面 */}
+          <div className="flex items-center justify-between mt-1.5 px-1 w-full">
+            <MessageActionButtons
+              copied={copied}
+              isStreaming={isStreaming}
+              isDeleting={isDeleting}
+              onCopy={handleCopy}
+              onDelete={handleDelete}
+            />
+            <div className="flex items-center gap-2">
+              {copied && !isUser && (
+                <span className="text-xs text-muted-foreground">已复制</span>
+              )}
+              {!isUser && isStreaming && (
+                <span className="text-xs text-primary animate-pulse">正在输入...</span>
+              )}
+              <span className="text-xs text-muted-foreground/70">
+                {formatMessageTime(message.timestamp)}
+              </span>
+            </div>
           </div>
         </div>
       </div>

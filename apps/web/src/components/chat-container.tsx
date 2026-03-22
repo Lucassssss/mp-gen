@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { ChatMessage, type Message } from "./chat-message";
@@ -48,12 +48,9 @@ interface StreamingMessage extends Message {
 }
 
 export function ChatContainer() {
-  const { 
-    messages: storeMessages, 
+  const {
+    messages: storeMessages,
     currentConversation,
-    sending,
-    sendMessage,
-    clearCurrentMessages 
   } = useConversationStore();
   
   const [messages, setMessages] = useState<StreamingMessage[]>([]);
@@ -128,6 +125,22 @@ export function ChatContainer() {
       await handleDeepAgentChat(aiMessageId, input);
     } else {
       await handleNormalChat(aiMessageId, input);
+    }
+  };
+
+  const handleMessageDeleted = () => {
+    console.log("[ChatContainer] 消息已删除，刷新列表");
+    // 可选：重新加载消息列表以确保同步
+    if (currentConversation?.id) {
+      fetch(`${API_BASE}/conversations/${currentConversation.id}/messages`)
+        .then(res => res.json())
+        .then(data => {
+          setMessages(data.messages?.map((m: any) => ({
+            ...m,
+            isComplete: true,
+          })) || []);
+        })
+        .catch(err => console.error("刷新消息列表失败:", err));
     }
   };
 
@@ -630,10 +643,11 @@ export function ChatContainer() {
                   ) : (
                     <div className="space-y-6">
                       {messages.map((message) => (
-                        <ChatMessage 
-                          key={message.id} 
+                        <ChatMessage
+                          key={message.id}
                           message={message}
                           isStreaming={!message.isComplete && message.role === "assistant"}
+                          onMessageDeleted={handleMessageDeleted}
                         />
                       ))}
 
@@ -754,10 +768,11 @@ export function ChatContainer() {
                   ) : (
                     <div className="space-y-6">
                       {messages.map((message) => (
-                        <ChatMessage 
-                          key={message.id} 
+                        <ChatMessage
+                          key={message.id}
                           message={message}
                           isStreaming={!message.isComplete && message.role === "assistant"}
+                          onMessageDeleted={handleMessageDeleted}
                         />
                       ))}
                       {isTyping && (

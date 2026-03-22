@@ -36,6 +36,7 @@ interface ConversationStore {
   createConversation: (title?: string) => Promise<Conversation>;
   selectConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   clearCurrentMessages: () => Promise<void>;
   triggerPreviewAction: (action: 'start' | 'create', sessionId: string) => void;
@@ -128,7 +129,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   deleteConversation: async (id: string) => {
     try {
       await fetch(`${API_BASE}/conversations/${id}`, { method: "DELETE" });
-      
+
       const { currentConversation, conversations } = get();
       set({
         conversations: conversations.filter((c) => c.id !== id),
@@ -137,6 +138,28 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       });
     } catch (error) {
       set({ error: String(error) });
+    }
+  },
+
+  deleteMessage: async (messageId: string) => {
+    const { currentConversation } = get();
+    if (!currentConversation) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      set((state) => ({
+        messages: state.messages.filter((m) => m.id !== messageId),
+      }));
+    } catch (error) {
+      console.error("删除消息失败:", error);
+      throw error;
     }
   },
 

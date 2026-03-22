@@ -125,6 +125,11 @@ export function clearMessages(conversationId: string): void {
   db.prepare(`UPDATE conversations SET updated_at = ? WHERE id = ?`).run(Date.now(), conversationId);
 }
 
+export function deleteMessage(messageId: string): boolean {
+  const result = db.prepare("DELETE FROM messages WHERE id = ?").run(messageId);
+  return result.changes > 0;
+}
+
 export async function generateTitle(userMessage: string, modelName: string): Promise<string> {
   const { text } = await generateText({
     model: Model.create(modelName),

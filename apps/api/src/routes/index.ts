@@ -13,6 +13,7 @@ import {
   getMessages,
   addMessage,
   clearMessages,
+  deleteMessage,
   generateTitle,
   convertToUIMessages,
 } from "../services/conversation.js";
@@ -127,6 +128,15 @@ router.get("/conversations/:id/messages", (req, res) => {
 router.delete("/conversations/:id/messages", (req, res) => {
   clearMessages(req.params.id);
   res.json({ success: true });
+});
+
+router.delete("/messages/:messageId", (req, res) => {
+  const success = deleteMessage(req.params.messageId);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: "Message not found" });
+  }
 });
 
 router.post("/api/chat", async (req, res) => {

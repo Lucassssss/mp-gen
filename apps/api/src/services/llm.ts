@@ -65,6 +65,7 @@ export const runChat = async (
     const MAX_TOOL_ERRORS = 10;
 
     for await (const part of result.fullStream) {
+      console.log(`[DEBUG RAW] part.type: ${part.type}`, part);
       try {
         switch (part.type) {
           case 'reasoning-delta':
@@ -76,10 +77,12 @@ export const runChat = async (
             res.write(`data: ${JSON.stringify({ type: "text", content: part.text })}\n\n`);
             break;
           case 'tool-call': {
+            debugger;
             const inputStr = typeof part.input === 'object' ? JSON.stringify(part.input) : String(part.input || '');
             if (part.toolName === 'initTaroProject' || part.toolName === 'editPageCode') {
               setToolSessionId(sessionId);
             }
+            console.log(`[DEBUG] tool-call: ${part.toolName}, input length: ${inputStr.length}, input preview: ${inputStr.substring(0, 200)}`);
             res.write(`data: ${JSON.stringify({
               type: "tool_call",
               id: part.toolCallId,
@@ -89,7 +92,9 @@ export const runChat = async (
             break;
           }
           case 'tool-result': {
+            debugger;
             const outputStr = typeof part.output === 'object' ? JSON.stringify(part.output) : String(part.output || '');
+            console.log(`[DEBUG] tool-result: ${part.toolName}, output length: ${outputStr.length}, output preview: ${outputStr.substring(0, 200)}`);
 
             if (part.toolName && (
               part.toolName === 'createCodeArtifact' ||
