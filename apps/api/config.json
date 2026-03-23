@@ -1,0 +1,14 @@
+{
+  "apiKeys": {
+    "deepseekBaseUrl": "https://api.deepseek.com",
+    "minimaxBaseUrl": "https://api.minimaxi.com/anthropic/v1",
+    "openrouterBaseUrl": "https://openrouter.ai/api/v1",
+    "deepseek": "",
+    "minimax": "sk-cp-gdwHPq3VAy8jdT4jAut_9__eFON5Yom1tgbWkmMoNdAQWlUefnERto8eNJ5RRrnRSYyacEoEM3PcI68d23ZytprGj_x0245I_4RDJ-juR56GnZ_rdivMcws",
+    "openrouter": ""
+  },
+  "settings": {
+    "defaultModel": "deepseek/deepseek-chat",
+    "defaultMode": "agent"
+  }
+}

@@ -17,8 +17,12 @@ import {
   generateTitle,
   convertToUIMessages,
 } from "../services/conversation.js";
+import configRouter from "./config.js";
 
 const router = Router();
+
+// Mount config routes
+router.use("/", configRouter);
 
 router.get("/debug/tools", (req, res) => {
   res.json({

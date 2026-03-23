@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Mail, Server, Key, Globe, Settings, Loader2, CheckCircle2, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { X, Mail, Server, Key, Globe, Settings, Loader2, CheckCircle2, Palette, Sun, Moon, Monitor, AlertCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "next-themes";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 const SYSTEM_CONFIGS = [
   { id: "appearance", name: "界面设置", icon: Palette, description: "主题和显示配置" },
+  { id: "api", name: "API 密钥", icon: Key, description: "管理第三方 AI 模型 API 密钥" },
   { id: "smtp", name: "SMTP 邮件", icon: Mail, description: "配置邮件发送服务器" },
   { id: "sms", name: "短信服务", icon: Globe, description: "配置短信发送服务" },
   { id: "storage", name: "存储服务", icon: Server, description: "配置文件存储服务" },
-  { id: "api", name: "API 密钥", icon: Key, description: "管理第三方 API 密钥" },
 ];
 
 const THEMES = [
@@ -37,9 +39,22 @@ export function SystemModal({ isOpen, onClose }: SystemModalProps) {
     fromEmail: "",
     fromName: "",
   });
+  const [apiKeys, setApiKeys] = useState({
+    deepseek: "",
+    deepseekBaseUrl: "https://api.deepseek.com",
+    minimax: "",
+    minimaxBaseUrl: "https://api.minimaxi.com/anthropic/v1",
+    openrouter: "",
+    openrouterBaseUrl: "https://openrouter.ai/api/v1",
+  });
+  const [configStatus, setConfigStatus] = useState<{
+    isConfigured: boolean;
+    providers: Record<string, boolean>;
+  }>({ isConfigured: false, providers: {} });
 
   useEffect(() => {
     setMounted(true);
+    loadConfig();
   }, []);
 
   useEffect(() => {
@@ -47,6 +62,51 @@ export function SystemModal({ isOpen, onClose }: SystemModalProps) {
       localStorage.setItem("theme", theme);
     }
   }, [theme, selectedConfig]);
+
+  const loadConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/config`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.config?.apiKeys) {
+          setApiKeys({
+            deepseek: data.config.apiKeys.deepseek || "",
+            deepseekBaseUrl: data.config.apiKeys.deepseekBaseUrl || "https://api.deepseek.com",
+            minimax: data.config.apiKeys.minimax || "",
+            minimaxBaseUrl: data.config.apiKeys.minimaxBaseUrl || "https://api.minimaxi.com/anthropic/v1",
+            openrouter: data.config.apiKeys.openrouter || "",
+            openrouterBaseUrl: data.config.apiKeys.openrouterBaseUrl || "https://openrouter.ai/api/v1",
+          });
+        }
+      }
+      
+      const statusRes = await fetch(`${API_BASE}/config/status`);
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        setConfigStatus(statusData);
+      }
+    } catch (error) {
+      console.error('Failed to load config:', error);
+    }
+  };
+
+  const handleSaveApiKeys = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKeys }),
+      });
+      if (res.ok) {
+        await loadConfig();
+      }
+    } catch (error) {
+      console.error('Failed to save API keys:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleThemeChange = (themeId: string) => {
     setTheme(themeId);
@@ -255,7 +315,143 @@ export function SystemModal({ isOpen, onClose }: SystemModalProps) {
                 </div>
               )}
 
-              {selectedConfig !== "appearance" && selectedConfig !== "smtp" && (
+              {selectedConfig === "api" && (
+                <div className="space-y-6 max-w-2xl">
+                  <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      {configStatus.isConfigured ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-500" />
+                      )}
+                      <span className="font-medium">
+                        {configStatus.isConfigured ? "已配置 API 密钥" : "请配置至少一个 API 密钥"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      配置 AI 模型的 API 密钥后，即可使用聊天和小程序生成功能。
+                    </p>
+                  </div>
+
+                  {/* DeepSeek */}
+                  <div className="p-4 border border-border/50 rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">DeepSeek</h4>
+                        <p className="text-xs text-muted-foreground">深度求索 AI 模型</p>
+                      </div>
+                      {configStatus.providers?.deepseek && (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">已配置</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">API Key</label>
+                      <input
+                        type="password"
+                        value={apiKeys.deepseek}
+                        onChange={(e) => setApiKeys({ ...apiKeys, deepseek: e.target.value })}
+                        placeholder="sk-xxxxxxxxxxxxxxxx"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">Base URL</label>
+                      <input
+                        type="text"
+                        value={apiKeys.deepseekBaseUrl}
+                        onChange={(e) => setApiKeys({ ...apiKeys, deepseekBaseUrl: e.target.value })}
+                        placeholder="https://api.deepseek.com"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* MiniMax */}
+                  <div className="p-4 border border-border/50 rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">MiniMax</h4>
+                        <p className="text-xs text-muted-foreground">MiniMax AI 模型</p>
+                      </div>
+                      {configStatus.providers?.minimax && (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">已配置</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">API Key</label>
+                      <input
+                        type="password"
+                        value={apiKeys.minimax}
+                        onChange={(e) => setApiKeys({ ...apiKeys, minimax: e.target.value })}
+                        placeholder="输入 MiniMax API Key"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">Base URL</label>
+                      <input
+                        type="text"
+                        value={apiKeys.minimaxBaseUrl}
+                        onChange={(e) => setApiKeys({ ...apiKeys, minimaxBaseUrl: e.target.value })}
+                        placeholder="https://api.minimaxi.com/anthropic/v1"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* OpenRouter */}
+                  <div className="p-4 border border-border/50 rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">OpenRouter</h4>
+                        <p className="text-xs text-muted-foreground">多模型聚合服务 (支持 Claude, GPT, Grok 等)</p>
+                      </div>
+                      {configStatus.providers?.openrouter && (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">已配置</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">API Key</label>
+                      <input
+                        type="password"
+                        value={apiKeys.openrouter}
+                        onChange={(e) => setApiKeys({ ...apiKeys, openrouter: e.target.value })}
+                        placeholder="sk-or-xxxxxxxx"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 items-center">
+                      <label className="text-sm text-muted-foreground">Base URL</label>
+                      <input
+                        type="text"
+                        value={apiKeys.openrouterBaseUrl}
+                        onChange={(e) => setApiKeys({ ...apiKeys, openrouterBaseUrl: e.target.value })}
+                        placeholder="https://openrouter.ai/api/v1"
+                        className="col-span-3 px-3 py-2 bg-muted/30 border border-border/50 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button
+                      onClick={handleSaveApiKeys}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      保存配置
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>提示：</strong>配置至少一个 API 密钥后重启应用即可生效。API 密钥存储在本地配置文件中，不会上传到任何服务器。
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {selectedConfig !== "appearance" && selectedConfig !== "smtp" && selectedConfig !== "api" && (
                 <div className="text-center py-12 border border-dashed border-border rounded-lg">
                   <Icon className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">{currentConfig?.name} 配置开发中...</p>

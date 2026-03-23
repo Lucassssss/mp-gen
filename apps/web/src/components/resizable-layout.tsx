@@ -8,9 +8,12 @@ import { PhonePreviewPanel } from "@/components/phone-preview-panel";
 import { WebhooksModal } from "@/components/modals/webhooks-modal";
 import { SystemModal } from "@/components/modals/system-modal";
 import { AgentsModal } from "@/components/modals/agents-modal";
+import { SetupWizard } from "@/components/setup-wizard";
 import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 
 const LAYOUT_STORAGE_KEY = "resizable-layout-state";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 interface LayoutState {
   sidebarWidth: number;
@@ -80,6 +83,28 @@ export function ResizableLayout({
   const [webhooksOpen, setWebhooksOpen] = React.useState(false);
   const [systemOpen, setSystemOpen] = React.useState(false);
   const [agentsOpen, setAgentsOpen] = React.useState(false);
+  const [showSetupWizard, setShowSetupWizard] = React.useState(false);
+  const [checkingConfig, setCheckingConfig] = React.useState(true);
+
+  React.useEffect(() => {
+    checkConfig();
+  }, []);
+
+  const checkConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/config/status`);
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.isConfigured) {
+          setShowSetupWizard(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check config:', error);
+    } finally {
+      setCheckingConfig(false);
+    }
+  };
 
   const handleOpenSettings = (tab: string) => {
     switch (tab) {
@@ -239,6 +264,23 @@ export function ResizableLayout({
 
   return (
     <main className="h-screen flex flex-col bg-background overflow-hidden bg-gradient" ref={containerRef}>
+      {/* Setup Wizard */}
+      {showSetupWizard && (
+        <SetupWizard onComplete={() => setShowSetupWizard(false)} />
+      )}
+
+      {/* Loading state while checking config */}
+      {checkingConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#4e83fd] to-[#3370ff] flex items-center justify-center animate-pulse">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-muted-foreground">正在加载...</p>
+          </div>
+        </div>
+      )}
+
       {/* Floating Sidebar Overlay */}
       {isSidebarFloating && (
         <div 

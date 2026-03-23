@@ -129,13 +129,21 @@ class MpPreviewService {
     });
 
     let ready = false;
-    let resolveReady: () => void;
-    const readyPromise = new Promise<void>((resolve) => {
+    let hasError = false;
+    let errorMessage = '';
+    let resolveReady: (value: void | PromiseLike<void>) => void;
+    let rejectReady: (reason: any) => void;
+    const readyPromise = new Promise<void>((resolve, reject) => {
       resolveReady = resolve;
+      rejectReady = reject;
     });
 
+    let errorBuffer: string[] = [];
+    let inErrorBlock = false;
+    let errorFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
     const checkReady = (text: string) => {
-      if (ready) return;
+      if (ready || hasError) return;
 
       if (text.includes('http://localhost')) {
         ready = true;
@@ -151,24 +159,81 @@ class MpPreviewService {
       }
     };
 
+    const flushError = () => {
+      if (errorFlushTimer) {
+        clearTimeout(errorFlushTimer);
+        errorFlushTimer = null;
+      }
+      if (errorBuffer.length > 0) {
+        errorMessage = errorBuffer.join('\n').slice(0, 1000);
+        hasError = true;
+        inErrorBlock = false;
+        errorBuffer = [];
+        logger.error('Build error detected', errorMessage);
+        rejectReady(new Error(`Build failed: ${errorMessage}`));
+      }
+    };
+
+    const checkError = (text: string) => {
+      if (hasError || ready) return;
+
+      if (text.includes('\u2715 [ERROR]') || text.includes('✘ [ERROR]')) {
+        inErrorBlock = true;
+        errorBuffer = [text];
+        if (errorFlushTimer) clearTimeout(errorFlushTimer);
+        errorFlushTimer = setTimeout(flushError, 500);
+        return;
+      }
+
+      if (inErrorBlock) {
+        errorBuffer.push(text);
+        if (errorFlushTimer) clearTimeout(errorFlushTimer);
+        errorFlushTimer = setTimeout(flushError, 500);
+
+        if (text.includes('ELIFECYCLE') || text.includes('Command failed')) {
+          flushError();
+        }
+      }
+    };
+
     devProcess.stdout?.on('data', (data) => {
       const text = decodeOutput(data);
       logger.debug('stdout', text.slice(0, 300));
       checkReady(text);
+      checkError(text);
     });
 
     devProcess.stderr?.on('data', (data) => {
       const text = decodeOutput(data);
       logger.debug('stderr', text.slice(0, 300));
       checkReady(text);
+      checkError(text);
     });
 
     devProcess.on('error', (err) => {
       logger.error('Process error', err);
+      if (!ready) {
+        hasError = true;
+        rejectReady(err);
+      }
+    });
+
+    devProcess.on('exit', (code) => {
+      if (errorFlushTimer) {
+        clearTimeout(errorFlushTimer);
+        errorFlushTimer = null;
+      }
+      if (code !== 0 && !ready && !hasError) {
+        flushError();
+        if (!hasError) {
+          hasError = true;
+          rejectReady(new Error(`Process exited with code ${code}`));
+        }
+      }
     });
 
     setTimeout(() => {
-      if (!ready) {
+      if (!ready && !hasError) {
         logger.info('Timeout reached, marking as ready anyway');
         ready = true;
         resolveReady();
@@ -272,7 +337,19 @@ class MpPreviewService {
     project.process = devProcess;
     project.status = 'compiling';
 
-    await readyPromise;
+    try {
+      await readyPromise;
+    } catch (err) {
+      logger.error('Build failed', err);
+      project.status = 'error';
+      return {
+        success: false,
+        projectId: sessionId,
+        status: 'error',
+        message: 'Build failed',
+        error: String(err),
+      };
+    }
 
     project.status = 'ready';
     project.previewUrl = `http://localhost:${project.port}`;

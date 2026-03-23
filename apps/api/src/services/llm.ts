@@ -7,7 +7,16 @@ import { setToolSessionId, clearToolSessionId } from '../tools/mini-program.js';
 import "dotenv/config";
 import Model from './model.js';
 import Agent from './agent.js';
-// import { streamDeepAgentUpdates } from './deep-agent.js';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+const DEBUG_LOG_FILE = path.join(process.cwd(), 'debug-tool-call.log');
+
+async function debugLog(label: string, data: any) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `\n=== ${timestamp} === ${label} ===\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}\n`;
+  await fs.appendFile(DEBUG_LOG_FILE, logEntry);
+}
 
 export interface ArtifactEvent {
   type: 'artifact';
@@ -51,13 +60,16 @@ export const runChat = async (
       messages: messages,
     });
   } else if(mode === "agent") {
-    result = await streamText({
+    const streamParams = {
       system: systemPromptWithSession,
       model: Model.create(modelName),
       messages: messages,
       tools: tools,
       stopWhen: stepCountIs(100),
-    });
+      experimental_continueSteps: true,
+      maxOutputTokens: 8192,
+    } as any;
+    result = await streamText(streamParams);
   }
 
   try {
@@ -65,7 +77,7 @@ export const runChat = async (
     const MAX_TOOL_ERRORS = 10;
 
     for await (const part of result.fullStream) {
-      console.log(`[DEBUG RAW] part.type: ${part.type}`, part);
+      await debugLog(`fullStream part.type: ${part.type}`, part);
       try {
         switch (part.type) {
           case 'reasoning-delta':
@@ -78,11 +90,12 @@ export const runChat = async (
             break;
           case 'tool-call': {
             debugger;
+            await debugLog('tool-call BEFORE stringify', part.input);
             const inputStr = typeof part.input === 'object' ? JSON.stringify(part.input) : String(part.input || '');
+            await debugLog(`tool-call AFTER stringify: length=${inputStr.length}`, inputStr.substring(0, 1000));
             if (part.toolName === 'initTaroProject' || part.toolName === 'editPageCode') {
               setToolSessionId(sessionId);
             }
-            console.log(`[DEBUG] tool-call: ${part.toolName}, input length: ${inputStr.length}, input preview: ${inputStr.substring(0, 200)}`);
             res.write(`data: ${JSON.stringify({
               type: "tool_call",
               id: part.toolCallId,
@@ -94,7 +107,7 @@ export const runChat = async (
           case 'tool-result': {
             debugger;
             const outputStr = typeof part.output === 'object' ? JSON.stringify(part.output) : String(part.output || '');
-            console.log(`[DEBUG] tool-result: ${part.toolName}, output length: ${outputStr.length}, output preview: ${outputStr.substring(0, 200)}`);
+            await debugLog(`tool-result: ${part.toolName}, output length=${outputStr.length}`, outputStr.substring(0, 500));
 
             if (part.toolName && (
               part.toolName === 'createCodeArtifact' ||

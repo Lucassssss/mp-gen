@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import router from "./routes/index.js";
 import { mpPreviewRouter } from "./services/taro-preview.js";
+import { placeholderRouter } from "./services/placeholder.js";
 import killPort from 'kill-port';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
 
 app.use(router);
 app.use('/api/mp', mpPreviewRouter);
+app.use('/api/placeholder', placeholderRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
