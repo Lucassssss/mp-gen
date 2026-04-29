@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+  <meta content="width=device-width,initial-scale=1,user-scalable=no" name="viewport">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="format-detection" content="telephone=no,address=no">
+  <meta name="apple-mobile-web-app-status-bar-style" content="white">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" >
+  <title>app-react</title>
+  <script><%= htmlWebpackPlugin.options.script %></script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    (function() {
+      var capturedErrors = [];
+      var errorEndpoint = null;
+
+      function setErrorEndpoint(endpoint) {
+        errorEndpoint = endpoint;
+        if (errorEndpoint && capturedErrors.length > 0) {
+          flushErrors();
+        }
+      }
+
+      function flushErrors() {
+        if (!errorEndpoint || capturedErrors.length === 0) return;
+        var errors = capturedErrors.splice(0, capturedErrors.length);
+        fetch(errorEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ errors: errors })
+        }).catch(function() {});
+      }
+
+      function captureError(data) {
+        var error = {
+          type: data.type || 'unknown',
+          message: data.message || '',
+          filename: data.filename || '',
+          lineno: data.lineno || 0,
+          colno: data.colno || 0,
+          stack: data.stack || '',
+          timestamp: Date.now()
+        };
+        capturedErrors.push(error);
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'CAPTURED_ERROR', error: error }, '*');
+        }
+        if (errorEndpoint) flushErrors();
+      }
+
+      window.addEventListener('error', function(e) {
+        var target = e.target || e.srcElement;
+        var tagName = target && target.tagName ? target.tagName.toLowerCase() : '';
+        if (tagName === 'img' || tagName === 'script' || tagName === 'link') {
+          captureError({
+            type: 'resource.error',
+            message: e.message || ('Failed to load ' + (target.src || target.href || 'resource')),
+            filename: target.src || target.href || '',
+            lineno: e.lineno || 0,
+            colno: e.colno || 0,
+            stack: ''
+          });
+          return;
+        }
+        captureError({
+          type: 'uncaught',
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+          stack: e.error && e.error.stack ? e.error.stack : ''
+        });
+      });
+
+      window.addEventListener('unhandledrejection', function(e) {
+        var msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+        var stack = e.reason && e.reason.stack ? e.reason.stack : '';
+        captureError({ type: 'unhandledrejection', message: msg, stack: stack });
+      });
+
+      var origConsoleError = console.error;
+      console.error = function() {
+        var msg = Array.prototype.slice.call(arguments).map(function(a) { return String(a); }).join(' ');
+        captureError({ type: 'console.error', message: msg });
+        origConsoleError.apply(console, arguments);
+      };
+
+      var origConsoleWarn = console.warn;
+      console.warn = function() {
+        var msg = Array.prototype.slice.call(arguments).map(function(a) { return String(a); }).join(' ');
+        captureError({ type: 'console.warn', message: msg });
+        origConsoleWarn.apply(console, arguments);
+      };
+
+      var origConsoleInfo = console.info;
+      console.info = function() {
+        var msg = Array.prototype.slice.call(arguments).map(function(a) { return String(a); }).join(' ');
+        captureError({ type: 'console.info', message: msg });
+        origConsoleInfo.apply(console, arguments);
+      };
+
+      var origConsoleDebug = console.debug;
+      console.debug = function() {
+        var msg = Array.prototype.slice.call(arguments).map(function(a) { return String(a); }).join(' ');
+        captureError({ type: 'console.debug', message: msg });
+        origConsoleDebug.apply(console, arguments);
+      };
+
+      var OrigFetch = window.fetch;
+      window.fetch = function() {
+        var args = Array.prototype.slice.call(arguments);
+        return OrigFetch.apply(this, args).then(function(response) {
+          if (!response.ok && response.status >= 400) {
+            captureError({
+              type: 'network.error',
+              message: 'HTTP ' + response.status + ': ' + response.url,
+              stack: 'fetch(' + args[0] + ') returned ' + response.status
+            });
+          }
+          return response;
+        })['catch'](function(err) {
+          captureError({
+            type: 'network.error',
+            message: 'fetch failed: ' + (err && err.message ? err.message : String(err)),
+            stack: 'fetch(' + args[0] + ') threw'
+          });
+          throw err;
+        });
+      };
+
+      var OrigXMLHttpRequest = window.XMLHttpRequest;
+      var OrigOpen = OrigXMLHttpRequest.prototype.open;
+      var OrigSend = OrigXMLHttpRequest.prototype.send;
+      OrigXMLHttpRequest.prototype.open = function() {
+        this.__url = arguments[1];
+        return OrigOpen.apply(this, arguments);
+      };
+      OrigXMLHttpRequest.prototype.send = function() {
+        var xhr = this;
+        this.addEventListener('load', function() {
+          if (xhr.status >= 400) {
+            captureError({
+              type: 'network.error',
+              message: 'HTTP ' + xhr.status + ': ' + xhr.__url,
+              stack: 'XMLHttpRequest(' + xhr.__url + ') returned ' + xhr.status
+            });
+          }
+        });
+        this.addEventListener('error', function() {
+          captureError({
+            type: 'network.error',
+            message: 'XMLHttpRequest error: ' + xhr.__url,
+            stack: 'XMLHttpRequest(' + xhr.__url + ') error'
+          });
+        });
+        return OrigSend.apply(this, arguments);
+      };
+
+      window.__setErrorEndpoint = setErrorEndpoint;
+      window.__getCapturedErrors = function() { return capturedErrors.slice(); };
+    })();
+  </script>
+</body>
+</html>
